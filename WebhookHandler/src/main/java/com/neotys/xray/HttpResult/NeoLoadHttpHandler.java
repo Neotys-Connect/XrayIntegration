@@ -92,6 +92,7 @@ public class NeoLoadHttpHandler {
 
     private Future<String> generateCloudAuth(HashMap<String,String> header,Httpclient client)
     {
+        logger.debug("Auth to the Jira Cloud");
         //----generate authentification token-------------
         Future<String> stringFuture=Future.future();
         CloudAuth cloudAuth=new CloudAuth(clien_id.get(),client_secret.get());
@@ -105,7 +106,7 @@ public class NeoLoadHttpHandler {
         response.setHandler(result-> {
             if(result.succeeded())
             {
-                logger.debug("REsponse received : " +result.result());
+                logger.debug("Auth REsponse received : " +result.result());
                 stringFuture.complete(result.result());
 
             }
@@ -118,114 +119,135 @@ public class NeoLoadHttpHandler {
 
         return stringFuture;
     }
-    public Future<Boolean> sendResult(Vertx vertx) throws ApiException, JAXBException, IOException, NeoLoadException, HttpException {
+
+
+    public Future<Boolean> sendResult(Vertx vertx) throws ApiException, JAXBException, IOException, NeoLoadException, HttpException,JsonSyntaxException {
         Future<Boolean> futureresult=Future.future();
-        List<MultiFormOject> multiFormOjects=generateResultsFiles();
+
         Httpclient client=new Httpclient(vertx,ssl);
         HashMap<String,String> header=new HashMap<>();
 
-        if(isCloud)
-        {
-           //----genereate the auth token
-            Future<String> token=generateCloudAuth(header,client);
-            token.setHandler(result->{
-                if(result.succeeded())
-                {
-
-                    header.put("Authorization","Bearer "+result.result().replaceAll("\"",""));
-                    header.put("Content-Type","multipart/form-data");
-                    //----sending resutls to xray----------
-                    Future<JsonObject> response = Future.future();
-                    try {
-                        response = client.sendMultiPartObjects(XRAY_URL_ROBOT_CLOUD_MULTIPART,header,multiFormOjects,user,password);
-                    } catch (HttpException e) {
-                        futureresult.fail(e);
-                    }
-                    //--------------------------------------
-                    if(response!=null) {
-                        response.setHandler(obj -> {
-                            if (obj.succeeded()) {
-                                JsonObject data = obj.result();
-                                if (data.containsKey("key")) {
-                                    //-----updating neoload test witht he jira link-----------
-                                    String key = data.getString("key");
-                                    TestUpdateRequest updateRequest = new TestUpdateRequest();
-                                    updateRequest.description("Jira results : " + generateJiraURL(key));
-                                    try {
-                                        resultsApi.updateTest(updateRequest, testid);
-                                        futureresult.complete(true);
-                                    } catch (ApiException e) {
-                                        futureresult.fail(e);
-                                    }
-
-                                } else {
-                                    logger.error("No issue id has been created in Jira");
-                                    futureresult.fail(
-                                     new NeoLoadException("No Issue has been created in Jira - " + obj.result().toString()))
-                                    ;
-                                }
-                            } else {
-                                logger.error("The test results has not been processed");
-                                futureresult.fail(  new NeoLoadException("The test results has not been processed"))
-                                ;
-
-                            }
-                        });
-                    }
-                    else
+        try{
+            List<MultiFormOject> multiFormOjects=generateResultsFiles();
+            if(isCloud)
+            {
+                logger.debug("Interacting with JIRA CLOUD");
+               //----genereate the auth token
+                Future<String> token=generateCloudAuth(header,client);
+                token.setHandler(result->{
+                    if(result.succeeded())
                     {
-                        futureresult.fail("Issue to send the files");
-                    }
-                }
-                else
-                {
-                    futureresult.fail(result.cause());
-                }
-            });
-        }
-        else
-        {
-            client.setServerport(Integer.parseInt(managedport.get()));
-            client.setServerhost(managedHost.get());
-            header.put("Content-Type","multipart/form-data");
 
-            //----sending resutls to xray----------
-            Future<JsonObject> response=client.sendMultiPartObjects(XRAY_URL_ONPREM_MULTIPART,header,multiFormOjects,user,password);
-            //--------------------------------------
-            response.setHandler(result->{
-                if(result.succeeded())
-                {
-                    JsonObject data=result.result();
-                    if(data.containsKey("key"))
-                    {
-                        //-----updating neoload test witht he jira link-----------
-                        String key=data.getString("key");
-                        TestUpdateRequest updateRequest=new TestUpdateRequest();
-                        updateRequest.description("Jira results : "+generateJiraURL(key));
+                        header.put("Authorization","Bearer "+result.result().replaceAll("\"",""));
+                        header.put("Content-Type","multipart/form-data");
+                        //----sending resutls to xray----------
+                        Future<JsonObject> response = Future.future();
                         try {
-                            resultsApi.updateTest(updateRequest,testid);
-                            futureresult.complete(true);
-                        } catch (ApiException e) {
+                            response = client.sendMultiPartObjects(XRAY_URL_ROBOT_CLOUD_MULTIPART,header,multiFormOjects,user,password);
+                        } catch (HttpException e) {
                             futureresult.fail(e);
                         }
+                        //--------------------------------------
+                        if(response!=null) {
+                            response.setHandler(obj -> {
+                                if (obj.succeeded()) {
+                                    JsonObject data = obj.result();
+                                    if (data.containsKey("key")) {
+                                        //-----updating neoload test witht he jira link-----------
+                                        String key = data.getString("key");
+                                        logger.debug("Issue id foud : "+key);
+                                        TestUpdateRequest updateRequest = new TestUpdateRequest();
+                                        updateRequest.description("Jira results : " + generateJiraURL(key));
+                                        logger.debug("URL to reach issue : "+updateRequest.getDescription());
+                                        try {
+                                            resultsApi.updateTest(updateRequest, testid);
+                                            futureresult.complete(true);
+                                        } catch (ApiException e) {
+                                            futureresult.fail(e);
+                                        }
 
+                                    } else {
+                                        logger.error("No issue id has been created in Jira");
+                                        futureresult.fail(
+                                         new NeoLoadException("No Issue has been created in Jira - " + obj.result().toString()))
+                                        ;
+                                    }
+                                } else {
+                                    logger.error("The test results has not been processed");
+                                    futureresult.fail(  new NeoLoadException("The test results has not been processed"))
+                                    ;
+
+                                }
+                            });
+                        }
+                        else
+                        {
+                            futureresult.fail("Issue to send the files");
+                        }
                     }
                     else
                     {
-                        logger.error("No issue id has been created in Jira");
-                        futureresult.fail( new NeoLoadException("No Issue has been created in Jira - "+ response.toString()));
+                        futureresult.fail(result.cause());
                     }
-                }
-                else
-                {
-                    logger.error("The test results has not been processed");
-                    futureresult.fail( new NeoLoadException("The test results has not been processed"));
+                });
+            }
+            else
+            {
+                logger.debug("Interacting with JIRA on prem");
+                client.setServerport(Integer.parseInt(managedport.get()));
+                client.setServerhost(managedHost.get());
+                header.put("Content-Type","multipart/form-data");
 
-                }
-            });
+                //----sending resutls to xray----------
+                Future<JsonObject> response=client.sendMultiPartObjects(XRAY_URL_ONPREM_MULTIPART,header,multiFormOjects,user,password);
+                //--------------------------------------
+                response.setHandler(result->{
+                    if(result.succeeded())
+                    {
+                        JsonObject data=result.result();
+                        if(data.containsKey("testExecIssue")) {
+                            JsonObject issueObject=data.getJsonObject("testExecIssue");
+                            if (issueObject.containsKey("key")) {
+                                //-----updating neoload test witht he jira link-----------
+                                String key = issueObject.getString("key");
+                                logger.debug("Issue id found : " + key);
+                                TestUpdateRequest updateRequest = new TestUpdateRequest();
+                                updateRequest.description("Jira results : " + generateJiraURL(key));
+                                logger.debug("URL to reach issue : " + updateRequest.getDescription());
+                                try {
+                                    resultsApi.updateTest(updateRequest, testid);
+                                    futureresult.complete(true);
+                                } catch (ApiException e) {
+                                    futureresult.fail(e);
+                                }
+
+                            }
+                            else
+                            {
+                                logger.error("No issue id has been created in Jira");
+                                futureresult.fail( new NeoLoadException("No Issue has been created in Jira - "+ response.toString()));
+                            }
+                        }
+                        else
+                        {
+                            logger.error("No issue id has been created in Jira");
+                            futureresult.fail( new NeoLoadException("No Issue has been created in Jira - "+ response.toString()));
+                        }
+                    }
+                    else
+                    {
+                        logger.error("The test results has not been processed");
+                        futureresult.fail( new NeoLoadException("The test results has not been processed"));
+
+                    }
+                });
+            }
+
         }
-
-
+        catch (Exception e)
+        {
+            futureresult.fail(e);
+        }
 
         return futureresult;
     }
@@ -245,11 +267,18 @@ public class NeoLoadHttpHandler {
 
         return url;
     }
-    private List<MultiFormOject> generateResultsFiles() throws ApiException, JAXBException, IOException {
+    private List<MultiFormOject> generateResultsFiles() throws ApiException, JAXBException, IOException, JsonSyntaxException, NeoLoadException {
         List<MultiFormOject> resultfiles=new ArrayList<>();
         statistics=resultsApi.getTestStatistics(testid);
 
+
+
         NeoLoadXrayDescription jsondesription=getXrayDescriptionFromTest(getTestDescription());
+        if(jsondesription==null)
+        {
+            throw new NeoLoadException("There is no description of this test");
+        }
+        logger.debug("XrayContext found : "+jsondesription.getProject());
         NeoLoadTestContext context=new NeoLoadTestContext(testid,projectName,scenarioName,testname,testStart,testEnd,Optional.ofNullable(getGlobalSLAIndicators(testid)),Optional.ofNullable(getSLAPerTest(testid)), Optional.ofNullable(getSLAPerInterval(testid)),jsondesription,status,neoload_Web_Url.get(),statistics,customfield_Revision,customfield_Testplan,customfield_Environment);
         Robot robotxml=new Robot(context);
 
@@ -264,38 +293,53 @@ public class NeoLoadHttpHandler {
         JAXBContext jaxbContext = JAXBContext.newInstance(Robot.class);
         Marshaller marshaller = jaxbContext.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+        logger.debug("Robot conent" + robotxml.toString());
         marshaller.marshal(robotxml, new File(folder.toAbsolutePath().toString()+"/robot.xml"));
-        resultfiles.add(new MultiFormOject("results","robot.xml",folder.toAbsolutePath().toString()+"/robot.xml","application/xml"));
+        String parametername;
+        if(isCloud)
+        {
+            parametername=CLOUD_ROBOT_PARAMETERNAME;
+        }
+        else
+            parametername=ONPREM_ROBOT_PARAMETERNAME;
 
+        resultfiles.add(new MultiFormOject(parametername,"robot.xml",folder.toAbsolutePath().toString()+"/robot.xml","application/xml"));
+
+        //----log for debuging the content of the files
+        logger.debugfileContent(folder.toAbsolutePath().toString()+"/robot.xml");
         //----generating the descirption json file-----
         NeoLoadTestDetails fields=new NeoLoadTestDetails(context,isCloud,maxVu,testoverviewpng);
         String infoFilename;
         if(isCloud)
         {
-            infoFilename="texec_info_cloud.json";
+            infoFilename=CLOUD_TEST_INFO_NAME;
         }
         else
-            infoFilename="texec_info.json";
+            infoFilename=ONPREM_TEST_INFO_NAME;
+
         Writer writer = new FileWriter(folder.toAbsolutePath().toString()+"/"+infoFilename);
         Gson gsontofile=new GsonBuilder().create();
         writer.write(updateJsonfile(gsontofile.toJsonTree(fields),context));
         writer.flush();
         writer.close();
-
-
+        logger.debug("teste info : "+fields.toString());
         resultfiles.add(new MultiFormOject("info",infoFilename,folder.toAbsolutePath().toString()+"/"+infoFilename,"application/octet-stream"));
         //-----------------------------------------------
-
+        //----log for debuging the content of the files
+        logger.debugfileContent(folder.toAbsolutePath().toString()+"/"+infoFilename);
         //----generating test json file--------------
         NeoLoadRunDetails neoLoadRunDetails=new NeoLoadRunDetails(new Field("This Test corresponds to the "+context.getProjectName() +" scenario "+context.getScenarioName() +"[NeoLoad Web|"+context.gettestURL()+"]"));
         Writer writer2 = new FileWriter(folder.toAbsolutePath().toString()+"/test_info.json");
         gsontofile.toJson(neoLoadRunDetails,writer2);
         writer2.flush();
         writer2.close();
+        logger.debug("teste info : "+neoLoadRunDetails.toString());
         resultfiles.add(new MultiFormOject("testInfo","test_info.json",folder.toAbsolutePath().toString()+"/test_info.json","application/octet-stream"));
         //---------------------------------------
+        logger.debugfileContent(folder.toAbsolutePath().toString()+"/test_info.json");
 
         return resultfiles;
+
     }
 
 
@@ -357,8 +401,16 @@ public class NeoLoadHttpHandler {
             testStart=definition.getStartDate();
             status=definition.getQualityStatus().getValue();
             testEnd=definition.getEndDate();
-            logger.debug("description of the test : "+ definition.getDescription());
-            return definition.getDescription();
+            if(!definition.getDescription().isEmpty())
+            {
+                logger.debug("description of the test : "+ definition.getDescription());
+                return definition.getDescription();
+            }
+            else
+            {
+                logger.info("The description field is empty");
+                return null;
+            }
         }
         else {
             logger.error("test not found");
@@ -380,13 +432,19 @@ public class NeoLoadHttpHandler {
         return resultsApi.getTestSLAPerInterval(testid,null,null);
     }
 
-    private NeoLoadXrayDescription getXrayDescriptionFromTest(String description)
+    private NeoLoadXrayDescription getXrayDescriptionFromTest(String description) throws JsonSyntaxException
     {
-        logger.debug("Converting Description into java Object");
-        Gson gson = new GsonBuilder().registerTypeAdapterFactory(new GsonJava8TypeAdapterFactory()).create();
-        NeoLoadXrayDescription xrayDescription = gson.fromJson(description, NeoLoadXrayDescription.class);
+        if(description!=null)
+        {
 
-        return xrayDescription;
+
+            logger.debug("Converting Description into java Object");
+            Gson gson = new GsonBuilder().registerTypeAdapterFactory(new GsonJava8TypeAdapterFactory()).create();
+            NeoLoadXrayDescription xrayDescription = gson.fromJson(description, NeoLoadXrayDescription.class);
+            return xrayDescription;
+        }
+        else
+            return null;
     }
 
     private void generateApiUrl()
@@ -406,15 +464,15 @@ public class NeoLoadHttpHandler {
             logger.error("No API key defined");
             throw new NeoLoadException("No API key is defined");
         }
-        neoload_API_Url= Optional.ofNullable(System.getenv(SECRET_NL_API_HOST));
+        neoload_API_Url= Optional.ofNullable(System.getenv(SECRET_NL_API_HOST)).filter(o->!o.isEmpty());
         if(!neoload_API_Url.isPresent())
             neoload_API_Url=Optional.of(DEFAULT_NL_SAAS_API_URL);
 
-        neoload_Web_Url=Optional.ofNullable(System.getenv(SECRET_NL_WEB_HOST));
+        neoload_Web_Url=Optional.ofNullable(System.getenv(SECRET_NL_WEB_HOST)).filter(o->!o.isEmpty());
         if(!neoload_Web_Url.isPresent())
             neoload_Web_Url=Optional.of(SECRET_NL_WEB_HOST);
 
-        if(System.getenv(SECRET_SSL)!=null)
+        if(System.getenv(SECRET_SSL)!=null&& !System.getenv(SECRET_SSL).isEmpty())
         {
             ssl=Boolean.parseBoolean(System.getenv(SECRET_SSL));
 
@@ -422,67 +480,74 @@ public class NeoLoadHttpHandler {
         else
             ssl=false;
 
-        managedHost=Optional.ofNullable(System.getenv(SECRET_MANAGED_HOST));
+        this.isCloud=false;
+
+        managedHost=Optional.ofNullable(System.getenv(SECRET_MANAGED_HOST)).filter(o->!o.isEmpty());
         if(managedHost.isPresent())
         {
-            managedport=Optional.ofNullable(System.getenv(SECRET_MANAGED_PORT));
+            logger.debug("A Managed hostname is defined");
+            managedport=Optional.ofNullable(System.getenv(SECRET_MANAGED_PORT)).filter(o->!o.isEmpty());
             if(!managedport.isPresent())
                 managedport=Optional.of(DEFAULT_MANAGED_PORT);
 
-            managedwebHost=Optional.ofNullable(System.getenv(SECRET_MANAGED_WEBHOST));
+            managedwebHost=Optional.ofNullable(System.getenv(SECRET_MANAGED_WEBHOST)).filter(o->!o.isEmpty());
             if(!managedwebHost.isPresent())
                 throw new NeoLoadException("The Web Host is required");
 
-            user=Optional.ofNullable(System.getenv(SECRET_USERNAME));
+            user=Optional.ofNullable(System.getenv(SECRET_USERNAME)).filter(o->!o.isEmpty());
             if(!user.isPresent())
                 throw new NeoLoadException("The user environment varaible is missing");
 
-            password=Optional.ofNullable(System.getenv(SECRET_PASSWORD));
+            password=Optional.ofNullable(System.getenv(SECRET_PASSWORD)).filter(o->!o.isEmpty());
             if(!password.isPresent())
                 throw new NeoLoadException("The password environment varaible is missing");
 
             isCloud=false;
 
-            customfield_Environment=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_ENVIRONMENT));
+            customfield_Environment=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_ENVIRONMENT)).filter(o->!o.isEmpty());
             if(!customfield_Environment.isPresent())
                 throw new NeoLoadException("The custom Field Environment id needs to be defined");
 
-            customfield_Testplan=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_TESTPLAN));
+            customfield_Testplan=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_TESTPLAN)).filter(o->!o.isEmpty());
             if(!customfield_Testplan.isPresent())
                 throw new NeoLoadException("The custom Field Test Plan id needs to be defined");
 
-            customfield_Revision=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_REVISION));
+            customfield_Revision=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_REVISION)).filter(o->!o.isEmpty());
+            isCloud=false;
 
         }
         else
         {
             user=Optional.empty();
             password=Optional.empty();
+            logger.debug("A Cloud hostname is defined");
+
             //----case of a cloud environment----
-            cloudhost=Optional.ofNullable(System.getenv(SECRET_CLOUD_HOST));
+            cloudhost=Optional.ofNullable(System.getenv(SECRET_CLOUD_HOST)).filter(o->!o.isEmpty());
+            this.isCloud=true;
+
             if(!cloudhost.isPresent())
                 throw new NeoLoadException("The cloud Host environment variable is missing");
 
-            cloudWebhost=Optional.ofNullable(System.getenv(SECRET_CLOUD_WEBHOST));
+            cloudWebhost=Optional.ofNullable(System.getenv(SECRET_CLOUD_WEBHOST)).filter(o->!o.isEmpty());
             if(!cloudWebhost.isPresent())
                 throw new NeoLoadException("The Web Host is required");
 
-            cloudport=Optional.ofNullable(System.getenv(SECRET_CLOUD_PORT));
+            cloudport=Optional.ofNullable(System.getenv(SECRET_CLOUD_PORT)).filter(o->!o.isEmpty());
             if(!cloudport.isPresent())
                 cloudport=Optional.of(DEFAULT_CLOUD_PORT);
 
-            clien_id=Optional.ofNullable(System.getenv(SECRET_CLIENTID));
+            clien_id=Optional.ofNullable(System.getenv(SECRET_CLIENTID)).filter(o->!o.isEmpty());
             if(!clien_id.isPresent())
                 throw new NeoLoadException("The client_id environment varaible is missing");
 
-            client_secret=Optional.ofNullable(System.getenv(SECRET_CLIENT_SECRET));
+            client_secret=Optional.ofNullable(System.getenv(SECRET_CLIENT_SECRET)).filter(o->!o.isEmpty());
             if(!client_secret.isPresent())
                 throw new NeoLoadException("The client_secret environment varaible is missing");
 
-            customfield_Revision=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_REVISION));
+            customfield_Revision=Optional.ofNullable(System.getenv(SECRET_CUSTOMFIELD_REVISION)).filter(o->!o.isEmpty());
 
 
-            isCloud=true;
 
         }
 

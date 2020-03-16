@@ -85,7 +85,8 @@ public class Httpclient {
                     if(handler.succeeded())
                     {
                         logger.debug("Request sent successfuly - uri :"+uri+" payload :"+object.toString());
-                        logger.debug("Received the following response :"+ handler.result().bodyAsString());
+                        logger.debug("Received the following response :"+ handler.result().bodyAsString() +" with the message "+handler.result().statusMessage() );
+
                         future.complete(handler.result().bodyAsJsonObject());
                     }
                     else

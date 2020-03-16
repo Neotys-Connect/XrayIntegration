@@ -1,5 +1,6 @@
 package com.neotys.xray.httpserver;
 
+import com.google.gson.JsonSyntaxException;
 import com.neotys.xray.HttpResult.NeoLoadHttpHandler;
 import com.neotys.xray.Logger.NeoLoadLogger;
 import com.neotys.xray.conf.NeoLoadException;
@@ -76,9 +77,17 @@ public class WebHookReceiver extends AbstractVerticle {
                 });
 
             }
+
+            catch (JsonSyntaxException e)
+            {
+                loadLogger.error("JsonSyntaxException error "+ e.getMessage());
+                e.printStackTrace();
+                routingContext.response().setStatusCode(500).end(e.getMessage());
+            }
             catch (Exception e)
             {
                 loadLogger.error("Technical error "+ e.getMessage());
+                e.printStackTrace();
                 routingContext.response().setStatusCode(500).end(e.getMessage());
             }
 

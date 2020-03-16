@@ -129,20 +129,6 @@
                             <NL_API_TOKEN>${NL_API_TOKEN}</NL_API_TOKEN>
                             <PORT>${port}</PORT>
                             <ssl>${ssl}</ssl>
-                            <!--
-                            <client_id>${client_id}</client_id>
-                            <client_secret>${client_secret}</client_secret>
-                            <CloudAPIHostname>${CloudAPIHostname}</CloudAPIHostname>
-                            <CloudPort>${CloudPort}</CloudPort>
-                            <CloudWebHostname>${CloudWebHostname}</CloudWebHostname> -->
-                            <ManagedAPIHostname>${ManagedAPIHostname}</ManagedAPIHostname>
-                            <ManagedWebHostname>${ManagedWebHostname}</ManagedWebHostname>
-                            <ManagedPort>${ManagedPort}</ManagedPort>
-                            <user>${user}</user>
-                            <password>${password}</password>
-                            <CustomFieldRevision>${CustomFieldRevision}</CustomFieldRevision>
-                            <CustomFieldEnvironement>${CustomFieldEnvironement}</CustomFieldEnvironement>
-                            <CustomFieldTestPlan>${CustomFieldTestPlan}</CustomFieldTestPlan>
                         </environment>
                     </container>
                 </configuration>

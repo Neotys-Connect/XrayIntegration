@@ -58,4 +58,12 @@ public class Constants {
     public static final String NEOLOAD_FAIL_STATUS="FAILED";
     public static final String JIRA_PASS_STATUS="PASS";
     public static final String JIRA_FAIL_STATUS="FAIL";
+
+    public static final String ISSUE_TYPE="Test Execution";
+
+    public static final String CLOUD_TEST_INFO_NAME="texec_info_cloud.json";
+    public static final String ONPREM_TEST_INFO_NAME="texec_info.json";
+
+    public static final String CLOUD_ROBOT_PARAMETERNAME="results";
+    public static final String ONPREM_ROBOT_PARAMETERNAME="file";
 }

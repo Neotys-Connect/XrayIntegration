@@ -17,17 +17,17 @@ public class NeoLoadXrayDescription {
     */
     //--------------
     String project;
-    Optional<String> version=Optional.empty();
-    Optional<String> revision=Optional.empty();
-    Optional<String> testPlan=Optional.empty();
-    Optional<String> testEnvironment=Optional.empty();
-    Optional<HashMap<String,String>> customFields=Optional.empty();
-    Optional<List<String>> tags =Optional.empty();
-    Optional<String> issuetype=Optional.empty();
-    Optional<String> fixVersions=Optional.empty();
+    String version;
+    String revision;
+    String testPlan;
+    String testEnvironment;
+    HashMap<String,String> customFields;
+    List<String> tags;
+    String issuetype;
+    String fixVersions;
 
 
-    public NeoLoadXrayDescription(String project, Optional<String> version, Optional<String> revision, Optional<String> testPlan, Optional<String> testEnvironment, Optional<HashMap<String, String>> customFields, Optional<List<String>> tags, Optional<String> issuetype, Optional<String> fixVersions) {
+    public NeoLoadXrayDescription(String project, String version, String revision, String testPlan, String testEnvironment, HashMap<String, String> customFields, List<String> tags, String issuetype, String fixVersions) {
         this.project = project;
         this.version = version;
         this.revision = revision;
@@ -40,34 +40,34 @@ public class NeoLoadXrayDescription {
     }
 
     public Optional<String> getFixVersions() {
-        return fixVersions;
+               return Optional.ofNullable(fixVersions).filter(o->!o.isEmpty());
     }
 
-    public void setFixVersions(Optional<String> fixVersions) {
+    public void setFixVersions(String fixVersions) {
         this.fixVersions = fixVersions;
     }
 
     public Optional<String> getIssuetype() {
-        return issuetype;
+        return Optional.ofNullable(issuetype).filter(o->!o.isEmpty());
     }
 
-    public void setIssuetype(Optional<String> issuetype) {
+    public void setIssuetype(String issuetype) {
         this.issuetype = issuetype;
     }
 
     public Optional<List<String>> getTags() {
-        return tags;
+        return Optional.ofNullable(tags).filter(o->!o.isEmpty());
     }
 
-    public void setTags(Optional<List<String>> tags) {
+    public void setTags(List<String> tags) {
         this.tags = tags;
     }
 
     public Optional<HashMap<String, String>> getCustomFields() {
-        return customFields;
+        return Optional.ofNullable(customFields).filter(o->!o.isEmpty());
     }
 
-    public void setCustomFields(Optional<HashMap<String, String>> customFields) {
+    public void setCustomFields(HashMap<String, String> customFields) {
         this.customFields = customFields;
     }
 
@@ -80,34 +80,34 @@ public class NeoLoadXrayDescription {
     }
 
     public Optional<String> getVersion() {
-        return version;
+        return Optional.ofNullable(version).filter(o->!o.isEmpty());
     }
 
-    public void setVersion(Optional<String> version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 
     public Optional<String> getRevision() {
-        return revision;
+        return Optional.ofNullable(revision).filter(o->!o.isEmpty());
     }
 
-    public void setRevision(Optional<String> revision) {
+    public void setRevision(String revision) {
         this.revision = revision;
     }
 
     public Optional<String> getTestPlan() {
-        return testPlan;
+        return Optional.ofNullable(testPlan).filter(o->!o.isEmpty());
     }
 
-    public void setTestPlan(Optional<String> testPlan) {
+    public void setTestPlan(String testPlan) {
         this.testPlan = testPlan;
     }
 
     public Optional<String> getTestEnvironment() {
-        return testEnvironment;
+        return Optional.ofNullable(testEnvironment).filter(o->!o.isEmpty());
     }
 
-    public void setTestEnvironment(Optional<String> testEnvironment) {
+    public void setTestEnvironment(String testEnvironment) {
         this.testEnvironment = testEnvironment;
     }
 }

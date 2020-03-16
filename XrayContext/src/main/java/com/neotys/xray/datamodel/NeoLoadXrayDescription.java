@@ -17,15 +17,15 @@ public class NeoLoadXrayDescription {
     */
     //--------------
     String project;
-    Optional<String> version;
-    Optional<String> revision;
-    Optional<String> testPlan;
-    Optional<String> testEnvironment;
-    Optional<HashMap<String,String>> customFields;
-    Optional<List<String>> tags;
-    Optional<String> fixVersions;
+    String version;
+    String revision;
+    String  testPlan;
+    String testEnvironment;
+    HashMap<String,String> customFields;
+    List<String> tags;
+    String fixVersions;
 
-    public NeoLoadXrayDescription(String project, Optional<String> version, Optional<String> revision, Optional<String> testPlan, Optional<String> testEnvironment, Optional<HashMap<String, String>> customFields, Optional<List<String>> tags, Optional<String> fixVersions) {
+    public NeoLoadXrayDescription(String project, String version, String revision, String testPlan, String testEnvironment, HashMap<String, String> customFields, List<String> tags, String fixVersions) {
         this.project = project;
         this.version = version;
         this.revision = revision;
@@ -36,39 +36,64 @@ public class NeoLoadXrayDescription {
         this.fixVersions = fixVersions;
     }
 
-    public NeoLoadXrayDescription(String project, com.google.common.base.Optional<String> version, com.google.common.base.Optional<String> revision, com.google.common.base.Optional<String> testplans, com.google.common.base.Optional<String> environments, com.google.common.base.Optional<HashMap<String, String>> customFields, com.google.common.base.Optional<List<String>> optinalListofTags,  com.google.common.base.Optional<String> fixVersions) {
+    public NeoLoadXrayDescription(String project, com.google.common.base.Optional<String> version, com.google.common.base.Optional<String> revision,  com.google.common.base.Optional<String> testplans, com.google.common.base.Optional<String> environments, com.google.common.base.Optional<HashMap<String, String>> customFields, com.google.common.base.Optional<List<String>> optinalListofTags,  com.google.common.base.Optional<String> fixVersions) {
         this.project = project;
-        this.version = Optional.ofNullable(version.orNull());
-        this.revision = Optional.ofNullable(revision.orNull());
-        this.testPlan = Optional.ofNullable(testplans.orNull());
-        this.testEnvironment = Optional.ofNullable(environments.orNull());
-        this.customFields = Optional.ofNullable(customFields.orNull());
-        this.tags = Optional.ofNullable(optinalListofTags.orNull());
-        this.fixVersions = Optional.ofNullable(fixVersions.orNull());
+        if(version.isPresent())
+            this.version=version.get();
+        else
+            this.version=null;
+        if(revision.isPresent())
+            this.revision=revision.get();
+        else
+            this.revision=null;
+
+        if(testplans.isPresent())
+            this.testPlan=testplans.get();
+        else
+            this.testPlan=null;
+
+        if(environments.isPresent())
+            this.testEnvironment=environments.get();
+        else
+            this.testEnvironment=null;
+
+        if(customFields.isPresent())
+            this.customFields=customFields.get();
+
+        if(optinalListofTags.isPresent())
+            this.tags=optinalListofTags.get();
+        else
+            this.tags=null;
+
+        if(fixVersions.isPresent())
+            this.fixVersions=fixVersions.get();
+        else
+            this.fixVersions=null;
+
     }
 
-    public Optional<String> getFixVersions() {
+    public String getFixVersions() {
         return fixVersions;
     }
 
-    public void setFixVersions(Optional<String> fixVersions) {
+    public void setFixVersions(String fixVersions) {
         this.fixVersions = fixVersions;
     }
 
 
-    public Optional<List<String>> getTags() {
+    public List<String> getTags() {
         return tags;
     }
 
-    public void setTags(Optional<List<String>> tags) {
+    public void setTags(List<String> tags) {
         this.tags = tags;
     }
 
-    public Optional<HashMap<String, String>> getCustomFields() {
+    public HashMap<String, String> getCustomFields() {
         return customFields;
     }
 
-    public void setCustomFields(Optional<HashMap<String, String>> customFields) {
+    public void setCustomFields(HashMap<String, String> customFields) {
         this.customFields = customFields;
     }
 
@@ -80,35 +105,35 @@ public class NeoLoadXrayDescription {
         this.project = project;
     }
 
-    public Optional<String> getVersion() {
+    public String getVersion() {
         return version;
     }
 
-    public void setVersion(Optional<String> version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 
-    public Optional<String> getRevision() {
+    public String getRevision() {
         return revision;
     }
 
-    public void setRevision(Optional<String> revision) {
+    public void setRevision(String revision) {
         this.revision = revision;
     }
 
-    public Optional<String> getTestPlan() {
+    public String getTestPlan() {
         return testPlan;
     }
 
-    public void setTestPlan(Optional<String> testPlan) {
+    public void setTestPlan(String testPlan) {
         this.testPlan = testPlan;
     }
 
-    public Optional<String> getTestEnvironment() {
+    public String getTestEnvironment() {
         return testEnvironment;
     }
 
-    public void setTestEnvironment(Optional<String> testEnvironment) {
+    public void setTestEnvironment(String testEnvironment) {
         this.testEnvironment = testEnvironment;
     }
 }

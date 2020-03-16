@@ -3,7 +3,12 @@ package com.neotys.xray.Logger;
 
 
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
@@ -114,6 +119,18 @@ public  class NeoLoadLogger {
         loger.log(Level.FINEST,s);
     }
 
+    public void debugfileContent(String file)
+    {
+        try {
+            debug("content of the file : "+file);
+            List<String> allLines = Files.readAllLines(Paths.get(file));
+           for (String line : allLines) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
 }

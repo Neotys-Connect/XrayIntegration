@@ -5,6 +5,7 @@ import com.neotys.xray.HttpResult.NeoLoadTestContext;
 
 import java.util.*;
 
+import static com.neotys.xray.conf.Constants.ISSUE_TYPE;
 import static com.neotys.xray.conf.NeoLoadMetrics.*;
 
 public class Fields {
@@ -50,8 +51,8 @@ public class Fields {
     public Fields(NeoLoadTestContext context, String maxVu, String testoverviewpng)
     {
         setProject(new Project(context.getDescription().getProject()));
-        if(context.getDescription().getIssuetype().isPresent())
-            setIssuetype(new IssueType(context.getDescription().getIssuetype().get()));
+
+        setIssuetype(new IssueType(ISSUE_TYPE));
 
         if(context.getDescription().getFixVersions().isPresent())
         {
