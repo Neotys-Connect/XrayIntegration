@@ -152,7 +152,7 @@ To configure the webhook in NeoLoad WEB you will need to :
 ```json
 {
             "testid": "$(test_id)",
-            "url_graph_overview": "$($url_graph_overview)",
+            "url_graph_overview": "$(url_graph_overview)",
             "maxvu" : "$(test_max_nb_vus)"
 }
 ```
