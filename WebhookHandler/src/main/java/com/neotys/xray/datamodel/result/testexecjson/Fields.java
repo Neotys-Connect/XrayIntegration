@@ -123,9 +123,11 @@ public class Fields {
 
     private void addStatisticsInDescirption(TestStatistics statistics, String maxVu, String testoverviewpng, NeoLoadTestContext context)
     {
+        Integer max=Integer.parseInt(maxVu);
+        max--;
         addDescription("!"+testoverviewpng+"|align=center!");
         addDescription("Here are the global statistics of the test :");
-        addDescription("* " + USER_LOAD+ ":" + maxVu);
+        addDescription("* " + USER_LOAD+ ":" + String.valueOf(max));
         addDescription("* " + REQUEST_COUNT+ " : "+statistics.getTotalRequestCountPerSecond().toString());
         addDescription("* " + REQUEST_DURATION + ": "+ statistics.getTotalRequestDurationAverage().toString());
         addDescription("* " + TRANSACTION_AVG_DURATION+ " : "+ statistics.getTotalTransactionDurationAverage().toString());

@@ -13,6 +13,8 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
+import java.util.HashMap;
+
 import static com.neotys.xray.conf.Constants.*;
 
 public class WebHookReceiver extends AbstractVerticle {
@@ -20,8 +22,9 @@ public class WebHookReceiver extends AbstractVerticle {
     private NeoLoadLogger loadLogger;
     int httpPort;
     private Vertx rxvertx;
+    private HashMap<String,String> testidStringStringHashMap;
     public void start() {
-
+        testidStringStringHashMap=new HashMap<>();
         loadLogger=new NeoLoadLogger(this.getClass().getName());
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
@@ -58,38 +61,38 @@ public class WebHookReceiver extends AbstractVerticle {
             String testid=body.getString(TESTID_KEY);
             String maxVu=body.getString(MAX_VU_KEY);
             String urlpngoverview=body.getString(OVERVIEW_PICTURE_KEY);
-            loadLogger.setTestid(testid);
-            loadLogger.debug("Received Webhook with testid  "+testid);
-            try{
-                NeoLoadHttpHandler httpHandler=new NeoLoadHttpHandler(testid,maxVu,urlpngoverview);
-                Future<Boolean> booleanFuture=httpHandler.sendResult(this.vertx);
-                booleanFuture.setHandler(booleanAsyncResult -> {
-                    if(booleanAsyncResult.succeeded())
-                    {
-                        routingContext.response().setStatusCode(200)
-                                .end("Results sent to Xray");
-                    }
-                    else
-                    {
-                        routingContext.response().setStatusCode(500)
-                                .end("Issue to sent to Xray");
-                    }
-                });
-
-            }
-
-            catch (JsonSyntaxException e)
+            //----is test id currently processed?-----
+            if(!testidStringStringHashMap.containsKey(testid))
             {
-                loadLogger.error("JsonSyntaxException error "+ e.getMessage());
-                e.printStackTrace();
-                routingContext.response().setStatusCode(500).end(e.getMessage());
+                loadLogger.setTestid(testid);
+                loadLogger.debug("Received Webhook with testid  " + testid);
+                testidStringStringHashMap.put(testid,testid);
+                try {
+                    NeoLoadHttpHandler httpHandler = new NeoLoadHttpHandler(testid, maxVu, urlpngoverview);
+                    Future<Boolean> booleanFuture = httpHandler.sendResult(this.vertx);
+                    booleanFuture.setHandler(booleanAsyncResult -> {
+                        if (booleanAsyncResult.succeeded()) {
+                            routingContext.response().setStatusCode(200)
+                                    .end("Results sent to Xray");
+                            testidStringStringHashMap.remove(testid);
+                        } else {
+                            routingContext.response().setStatusCode(500)
+                                    .end("Issue to sent to Xray");
+                        }
+                    });
+
+                } catch (JsonSyntaxException e) {
+                    loadLogger.error("JsonSyntaxException error " + e.getMessage());
+                    e.printStackTrace();
+                    routingContext.response().setStatusCode(500).end(e.getMessage());
+                } catch (Exception e) {
+                    loadLogger.error("Technical error " + e.getMessage());
+                    e.printStackTrace();
+                    routingContext.response().setStatusCode(500).end(e.getMessage());
+                }
             }
-            catch (Exception e)
-            {
-                loadLogger.error("Technical error "+ e.getMessage());
-                e.printStackTrace();
-                routingContext.response().setStatusCode(500).end(e.getMessage());
-            }
+            else
+                loadLogger.info(testid + " is already in process");
 
         }
         else
