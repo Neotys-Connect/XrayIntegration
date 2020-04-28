@@ -1,17 +1,17 @@
 # NeoLoad Xray Integration
 
-This project is aimed to integrate NeoLoad into Xray.
+This project is aimed to integrate NeoLoad into Xray, giving users the ability to track performance testing results in Jira.
 This project has 2 disctinct components :
 * `XrayContext` : Custom action to add in NeoLoad to send the Project Context to NeoLoad Web.
 * `WebhookHandler` : Service that will receive the NeoLoad Web Test end notification ( through WebHook)
 ## XrayContext
 This custom action will allow you to add all the project information required in XRAY :
-   * `Project` (Required) : project id in Jira/Xray
+   * `Project` (Required) : Project key in Jira/Xray
    * `Version` (Optional): Version of the application in Jira/Xray
-   * `Revision` (Optional) : Revision numnber of the project in Jira/Xray
-   * `TestPlan` (Optional) : TestPlan id
+   * `Revision` (Optional) : Revision number
+   * `TestPlan` (Optional) : Test Plan issue key
    * `Tags` (Optional) : Tag to add in the test results in Xray/Jira
-   * `FixVersions` (Optional) : FixedVersion of the project in Xray/Jira
+   * `FixVersions` (Optional) : Version of the project in Xray/Jira
    * `Environment` (Optional) : TestEnvironment of the test results
    * `CustomFields` (Optional) : CustomFields required to import tests results in Xray/Jira
 
@@ -45,6 +45,9 @@ Once installed, how to use in a given NeoLoad project:
 1. Create a `XrayXontext` User Path.
 1. Insert `XrayContext` in the `Action` block.
 <p align="center"><img src="/screenshots/vu2.png" alt="XrayContext User Path" /></p>
+1. Create a `XrayContext` User Path.
+1. Insert `XrayContext` in the `Init` block.
+<p align="center"><img src="/screenshots/vu.png" alt="XrayContext User Path" /></p>
 
 
 1. Create a NeoLoad Population Xraycontext having only the userPath XrayContext
@@ -59,22 +62,22 @@ The XrayContext Population would need to be added to your NeoLoad scenario with 
    
 | Name             | Description |
 | -----            | ----- |
-| `Project`      | Identifier of your Project id in Jira |
+| `Project`      | Identifier of your project key in Jira |
 | `Version`  (Optional) |  Version of the project |
-| `Revision` (optional)  |  Revision number of the project |
-| `TestPlan` (Optional) |  Test Plan id to link the test results to |
-| `Tags` (Optional) | Tag to reference the test result in Jira . Format : tag1,tag2..Etc |
-| `FixVersions` (Optional) | Fixed Version of the project in Jira|
-| `Environment` (Optional) | Environement of the application  |
+| `Revision` (optional)  |  Revision number |
+| `TestPlan` (Optional) |  Test Plan issue key to link the results (i.e. Test Execution) to |
+| `Tags` (Optional) | Tag to reference the test result in Jira. Format : tag1,tag2,...,etc |
+| `FixVersions` (Optional) | Version of the project in Jira|
+| `Environment` (Optional) | Environment of the application  |
 | `CustomFields` (Optional) | JsonObject with all the required custom fields required to import test results in Jira |
 
 
 
 ## WebHook Handler
 
-###Configuration
+### Configuration
 The webhook handler is a web service package in a container : `hrexed/neoload_xrayresultsync`
-The container will required different type of Environement variables depending if you are using :
+The container will required different type of Environment variables depending if you are using :
 1. Jira Cloud
 1. Jira On premise
 
@@ -91,7 +94,7 @@ To be able to import NeoLoad test results you will need to specify :
 * `client_id` 
 * `client_secret`
 * `ssl` : True or false
-* `CustomFieldRevision` ( Optional ) : if you Jira Environement requires to precise the Revision number on your test results. You will need to specify the id of the custom field corresponding to Revision
+* `CustomFieldRevision` ( Optional ) : if you Jira Environment requires to precise the Revision number on your test results. You will need to specify the id of the custom field corresponding to Revision
 
 #### Jira On Premise
 To be able to import NeoLoad test results you will need to specify :
@@ -106,8 +109,8 @@ To be able to import NeoLoad test results you will need to specify :
 * `user` 
 * `password`
 * `ssl` : True or false
-* `CustomFieldRevision` ( Optional ) : if you Jira Environement requires to precise the Revision number on your test results. You will need to specify the id of the custom field corresponding to Revision
-* `CustomFieldEnvironement` (Optional) : if you Jira Environment requires to precise the Test environment to publish a test results. You will need to specify the id of the custom field Environment
+* `CustomFieldRevision` ( Optional ) : if you Jira Environment requires to precise the Revision number on your test results. You will need to specify the id of the custom field corresponding to Revision
+* `CustomFieldEnvironement` (Optional) : if you Jira Environment requires to precise the Test Environment to publish test results. You will need to specify the id of the custom field Test Environments
 * `CustomFieldTestPlan` (Optional) : if you Jira Environment requires to precise the Test Plan to publish a test results. You will need to specify the id of the custom field Test Plan
 
 #### Run the webhookHandler
