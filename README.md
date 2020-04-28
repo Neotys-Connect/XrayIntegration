@@ -43,8 +43,8 @@ XrayContext will update the test results in NeoLoad web with all the information
 Once installed, how to use in a given NeoLoad project:
 
 1. Create a `XrayXontext` User Path.
-1. Insert `XrayContext` in the `Init` block.
-<p align="center"><img src="/screenshots/vu.png" alt="XrayContext User Path" /></p>
+1. Insert `XrayContext` in the `Action` block.
+<p align="center"><img src="/screenshots/vu2.png" alt="XrayContext User Path" /></p>
 
 
 1. Create a NeoLoad Population Xraycontext having only the userPath XrayContext

@@ -1,6 +1,7 @@
 package com.neotys.xray.datamodel.result.Robotxml;
 
 
+import com.neotys.ascode.swagger.client.api.ResultsApi;
 import com.neotys.xray.HttpResult.NeoLoadTestContext;
 
 import javax.xml.bind.annotation.XmlAttribute;
@@ -27,11 +28,11 @@ public class Suite {
     {
 
     }
-    public Suite(NeoLoadTestContext context)
+    public Suite(NeoLoadTestContext context, ResultsApi resultsApi)
     {
         this.id=1;
         this.name=NEOLOAD+context.getProjectName();
-        this.test=new Test(context);
+        this.test=new Test(context,resultsApi);
     }
     @XmlAttribute
     public int getId() {

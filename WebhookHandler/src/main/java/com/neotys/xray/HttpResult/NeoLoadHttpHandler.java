@@ -269,7 +269,7 @@ public class NeoLoadHttpHandler {
     }
     private List<MultiFormOject> generateResultsFiles() throws ApiException, JAXBException, IOException, JsonSyntaxException, NeoLoadException {
         List<MultiFormOject> resultfiles=new ArrayList<>();
-        statistics=resultsApi.getTestStatistics(testid);
+        statistics= this.resultsApi.getTestStatistics(testid);
 
 
 
@@ -280,7 +280,7 @@ public class NeoLoadHttpHandler {
         }
         logger.debug("XrayContext found : "+jsondesription.getProject());
         NeoLoadTestContext context=new NeoLoadTestContext(testid,projectName,scenarioName,testname,testStart,testEnd,Optional.ofNullable(getGlobalSLAIndicators(testid)),Optional.ofNullable(getSLAPerTest(testid)), Optional.ofNullable(getSLAPerInterval(testid)),jsondesription,status,neoload_Web_Url.get(),statistics,customfield_Revision,customfield_Testplan,customfield_Environment);
-        Robot robotxml=new Robot(context);
+        Robot robotxml=new Robot(context,resultsApi);
 
 
         //----create the tempory folder----------

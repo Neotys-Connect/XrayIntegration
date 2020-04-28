@@ -1,9 +1,12 @@
 package com.neotys.xray.datamodel.result.Robotxml;
 
+import com.neotys.ascode.swagger.client.ApiException;
+import com.neotys.ascode.swagger.client.api.ResultsApi;
 import com.neotys.ascode.swagger.client.model.*;
 import com.neotys.xray.HttpResult.NeoLoadTestContext;
 import com.neotys.xray.common.NeoLoadUtils;
 
+import javax.annotation.Nullable;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -119,7 +122,7 @@ public class Test {
     {
 
     }
-    public Test(NeoLoadTestContext context)
+    public Test(NeoLoadTestContext context, ResultsApi resultsApi)
     {
         this.id=2;
         this.name=context.getScenarioName();
@@ -131,9 +134,9 @@ public class Test {
         if(context.getArrayOfSLAGlobalIndicatorDefinitionOptional().isPresent())
             addGlobalSLAIndicators(startdate,endate,context.getArrayOfSLAGlobalIndicatorDefinitionOptional().get());
         if(context.getArrayOfSLAPerTestDefinition().isPresent())
-            addSLAPerTest(startdate,endate,context.getArrayOfSLAPerTestDefinition().get());
+            addSLAPerTest(startdate,endate,context.getArrayOfSLAPerTestDefinition().get(),resultsApi,context.getTestid());
         if(context.getArrayOfSLAPerIntervalDefinition().isPresent())
-            addSLAPerInterval(startdate,endate,context.getArrayOfSLAPerIntervalDefinition().get());
+            addSLAPerInterval(startdate,endate,context.getArrayOfSLAPerIntervalDefinition().get(),resultsApi,context.getTestid());
 
         Status status=new Status(context.getStatus(),startdate,endate,Optional.empty());
         setStatus(Optional.of(status));
@@ -171,7 +174,7 @@ public class Test {
                 if (slaGlobalIndicatorDefinition.getKpi() != null)
                     indicator.setMsg(Optional.of(new MSG(level, slaGlobalIndicatorDefinition.getKpi().getValue() + " equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Failed Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getFailedThreshold()))));
                 else
-                    indicator.setMsg(Optional.of(new MSG(level, "global sla equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Failed Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getFailedThreshold()))));
+                    indicator.setMsg(Optional.of(new MSG(level, "global SLA equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Failed Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getFailedThreshold()))));
 
             }
             if(slaGlobalIndicatorDefinition.getStatus().getValue().equalsIgnoreCase("WARNING"))
@@ -179,7 +182,7 @@ public class Test {
                 if (slaGlobalIndicatorDefinition.getKpi() != null)
                     indicator.setMsg(Optional.of(new MSG(level, slaGlobalIndicatorDefinition.getKpi().getValue() + " equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Warning Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getWarningThreshold()))));
                 else
-                    indicator.setMsg(Optional.of(new MSG(level, "global sla equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Warning Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getWarningThreshold()))));
+                    indicator.setMsg(Optional.of(new MSG(level, "global SLA equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Warning Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getWarningThreshold()))));
 
             }
             else
@@ -187,7 +190,7 @@ public class Test {
                 if (slaGlobalIndicatorDefinition.getKpi() != null)
                     indicator.setMsg(Optional.of(new MSG(level, slaGlobalIndicatorDefinition.getKpi().getValue() + " equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Failed Thershold is " + getThresholdString(slaGlobalIndicatorDefinition.getFailedThreshold()))));
                 else
-                    indicator.setMsg(Optional.of(new MSG(level, "global sla equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Failed Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getFailedThreshold()))));
+                    indicator.setMsg(Optional.of(new MSG(level, "global SLA equal to " + slaGlobalIndicatorDefinition.getValue().toString() + " Failed Thershold is " +  getThresholdString(slaGlobalIndicatorDefinition.getFailedThreshold()))));
 
             }
                 kw.add(indicator);
@@ -221,13 +224,18 @@ public class Test {
 
     private String generateKWname(SLAElementDefinition definition, SLAKPIDefinition kpiname, String type)
     {
+        String userPathName="";
+        if(definition.getUserPath()!=null)
+            userPathName=definition.getUserPath();
+
+
         if(kpiname!=null)
-            return type+"."+definition.getName().replaceAll(" ","_")+"."+definition.getCategory().getValue()+"."+kpiname.getValue();
+            return type+"."+userPathName+"."+definition.getName().replaceAll(" ","_")+"."+definition.getCategory().getValue()+"."+kpiname.getValue();
         else
-            return type+"."+definition.getName().replaceAll(" ","_")+"."+definition.getCategory().getValue();
+            return type+"."+userPathName+"."+definition.getName().replaceAll(" ","_")+"."+definition.getCategory().getValue();
 
     }
-    private void addSLAPerTest(String start,String end,ArrayOfSLAPerTestDefinition arrayOfSLAPerTestDefinition)
+    private void addSLAPerTest(String start, String end, ArrayOfSLAPerTestDefinition arrayOfSLAPerTestDefinition, ResultsApi resultsApi, String testid)
     {
 
         arrayOfSLAPerTestDefinition.forEach(slaPerTestDefinition -> {
@@ -242,15 +250,17 @@ public class Test {
                         level="INFO";
 
 
+
+
                     if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("FAILED"))
-                        indicator.setMsg(Optional.ofNullable(generateMessage("FAILED",slaPerTestDefinition.getFailedThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level)));
+                        indicator.setMsg(Optional.ofNullable(generateMessage("FAILED",slaPerTestDefinition.getFailedThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level,null)));
                     else
                     {
                         if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("WARNING"))
-                            indicator.setMsg(Optional.ofNullable(generateMessage("WARNING",slaPerTestDefinition.getWarningThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level)));
+                            indicator.setMsg(Optional.ofNullable(generateMessage("WARNING",slaPerTestDefinition.getWarningThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level,null)));
 
                         else
-                            indicator.setMsg(Optional.ofNullable(generateMessage("FAILED",slaPerTestDefinition.getFailedThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level)));
+                            indicator.setMsg(Optional.ofNullable(generateMessage("FAILED",slaPerTestDefinition.getFailedThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level,null)));
 
                     }
                         kw.add(indicator);
@@ -259,13 +269,22 @@ public class Test {
                 );
     }
 
-    private MSG generateMessage(String failed, ThresholdDefinition definition, Float value, SLAElementDefinition elementDefinition, SLAKPIDefinition slakpiDefinition, String level)
+    private MSG generateMessage(String failed, ThresholdDefinition definition, Float value, SLAElementDefinition elementDefinition, SLAKPIDefinition slakpiDefinition, String level, @Nullable Long maxvalue)
     {
-        if(slakpiDefinition !=null)
-            return new MSG(level,elementDefinition.getCategory().getValue() + " with the name "+ elementDefinition.getName()+ " the kpi :"+ slakpiDefinition.getValue() +" equal to " + String.valueOf(value) +" - the "+failed+" Threshold is "+ getThresholdString(definition));
+        if(maxvalue!=null) {
+            if (slakpiDefinition != null)
+                return new MSG(level, elementDefinition.getCategory().getValue() + " with the name " + elementDefinition.getName() + " the kpi :" + slakpiDefinition.getValue() + " equal to " + String.valueOf(maxvalue.doubleValue()) + " - the " + failed + " Threshold is " + getThresholdString(definition));
+            else
+                return new MSG(level, elementDefinition.getCategory().getValue() + " with the name " + elementDefinition.getName() + " SLA equal to " + String.valueOf(maxvalue.doubleValue()) + " - the " + failed + " Threshold is " + getThresholdString(definition));
+        }
         else
-            return new MSG(level,elementDefinition.getCategory().getValue() + " with the name "+ elementDefinition.getName()+ " sla  equal to " + String.valueOf(value) +" - the "+failed+" Threshold is "+ getThresholdString(definition));
+        {
+            if (slakpiDefinition != null)
+                return new MSG(level, elementDefinition.getCategory().getValue() + " with the name " + elementDefinition.getName() + " the kpi :" + slakpiDefinition.getValue() + " equal to " + String.valueOf(value) + " - the " + failed + " Threshold is " + getThresholdString(definition));
+            else
+                return new MSG(level, elementDefinition.getCategory().getValue() + " with the name " + elementDefinition.getName() + " SLA equal to " + String.valueOf(value) + " - the " + failed + " Threshold is " + getThresholdString(definition));
 
+        }
     }
 
     private String getThresholdString(ThresholdDefinition definition)
@@ -275,7 +294,7 @@ public class Test {
 
         return result;
     }
-    private void addSLAPerInterval(String start,String end,ArrayOfSLAPerIntervalDefinition arrayOfSLAPerIntervalDefinition)
+    private void    addSLAPerInterval(String start, String end, ArrayOfSLAPerIntervalDefinition arrayOfSLAPerIntervalDefinition, ResultsApi resultsApi, String testid)
     {
         arrayOfSLAPerIntervalDefinition.forEach(slaPerTestDefinition -> {
                     KW indicator=new KW();
@@ -288,13 +307,27 @@ public class Test {
                     else
                         level="INFO";
 
+                    Long max= null;
+                     if(slaPerTestDefinition.getElement().getElementID()!= null)
+                     {
+                         //----collect the max value-----
+
+                         try {
+                             ElementValues values=resultsApi.getTestElementsValues(testid,slaPerTestDefinition.getElement().getElementID());
+                              max=values.getMaxDuration();
+                              max=max/1000;
+                         } catch (ApiException e) {
+                             e.printStackTrace();
+                         }
+
+                     }
                      if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("FAILED")) {
-                         indicator.setMsg(Optional.ofNullable(generateMessage("FAILED", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getFailed(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level)));
+                         indicator.setMsg(Optional.ofNullable(generateMessage("FAILED", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getFailed(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level,max)));
                      }
                      if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("WARNING"))
-                         indicator.setMsg(Optional.ofNullable(generateMessage("WARNING", slaPerTestDefinition.getWarningThreshold(), slaPerTestDefinition.getWarning(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level)));
+                         indicator.setMsg(Optional.ofNullable(generateMessage("WARNING", slaPerTestDefinition.getWarningThreshold(), slaPerTestDefinition.getWarning(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level,max)));
                      else
-                         indicator.setMsg(Optional.ofNullable(generateMessage("FAILED", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getFailed(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level)));
+                         indicator.setMsg(Optional.ofNullable(generateMessage("FAILED", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getFailed(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level,max)));
 
             kw.add(indicator);
                 }

@@ -1,5 +1,6 @@
 package com.neotys.xray.datamodel.result.Robotxml;
 
+import com.neotys.ascode.swagger.client.api.ResultsApi;
 import com.neotys.xray.HttpResult.NeoLoadTestContext;
 import com.neotys.xray.common.NeoLoadUtils;
 
@@ -23,9 +24,9 @@ public class Robot {
 
     }
 
-    public Robot(NeoLoadTestContext context) {
+    public Robot(NeoLoadTestContext context, ResultsApi resultsApi) {
         this.generated = NeoLoadUtils.convertDateLongToString(context.getTestEnd());
-        this.suite = new Suite(context);
+        this.suite = new Suite(context,resultsApi);
     }
 
     public static String getGenerator() {

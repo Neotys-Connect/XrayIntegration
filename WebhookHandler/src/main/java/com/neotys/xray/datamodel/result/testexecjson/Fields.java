@@ -130,7 +130,7 @@ public class Fields {
         addDescription("* " + USER_LOAD+ ":" + String.valueOf(max));
         addDescription("* " + REQUEST_COUNT+ " : "+statistics.getTotalRequestCountPerSecond().toString());
         addDescription("* " + REQUEST_DURATION + ": "+ statistics.getTotalRequestDurationAverage().toString());
-        addDescription("* " + TRANSACTION_AVG_DURATION+ " : "+ statistics.getTotalTransactionDurationAverage().toString());
+        addDescription("* " + TRANSACTION_AVG_DURATION+ " : "+ (statistics.getTotalTransactionDurationAverage()).toString());
         addDescription("* " + FAILURE_RATE + ":" + statistics.getTotalGlobalCountFailure().toString());
         addDescription("* " + DOWNLOADED_BYTES + " : " +statistics.getTotalGlobalDownloadedBytes().toString());
         addDescription("* " + DOWNLOADED_BYTES_PER_SECONDS +" : "+ statistics.getTotalGlobalDownloadedBytesPerSecond().toString());
