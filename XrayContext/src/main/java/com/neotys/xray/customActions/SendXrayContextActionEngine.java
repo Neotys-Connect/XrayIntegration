@@ -69,6 +69,7 @@ public class SendXrayContextActionEngine implements ActionEngine {
             client.setApiKey(context.getAccountToken());
             Gson gson=new Gson();
 
+
             TestUpdateRequest testUpdateRequest =new TestUpdateRequest();
 
             if(customField.isPresent())
@@ -97,6 +98,7 @@ public class SendXrayContextActionEngine implements ActionEngine {
         }catch (Exception e) {
             return ResultFactory.newErrorResult(context, STATUS_CODE_TECHNICAL_ERROR, "HTtml Unit technical Error ", e);
         }
+
 
         sampleResult.setRequestContent(requestBuilder.toString());
         sampleResult.setResponseContent(responseBuilder.toString());

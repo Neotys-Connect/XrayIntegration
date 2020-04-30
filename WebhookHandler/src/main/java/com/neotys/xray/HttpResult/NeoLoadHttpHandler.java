@@ -279,12 +279,12 @@ public class NeoLoadHttpHandler {
             throw new NeoLoadException("There is no description of this test");
         }
         logger.debug("XrayContext found : "+jsondesription.getProject());
-        NeoLoadTestContext context=new NeoLoadTestContext(testid,projectName,scenarioName,testname,testStart,testEnd,Optional.ofNullable(getGlobalSLAIndicators(testid)),Optional.ofNullable(getSLAPerTest(testid)), Optional.ofNullable(getSLAPerInterval(testid)),jsondesription,status,neoload_Web_Url.get(),statistics,customfield_Revision,customfield_Testplan,customfield_Environment);
+        NeoLoadTestContext context=new NeoLoadTestContext(testid,projectName,scenarioName,testname,testStart,testEnd,Optional.ofNullable(getGlobalSLAIndicators(testid)),Optional.ofNullable(getSLAPerTest(testid)), Optional.ofNullable(getSLAPerInterval(testid)),jsondesription,status,neoload_Web_Url.get(),statistics,customfield_Revision,customfield_Testplan,customfield_Environment,logger);
         Robot robotxml=new Robot(context,resultsApi);
-
+        logger.info("Robot object generated");
 
         //----create the tempory folder----------
-        logger.debug("Creating temporry folder");
+        logger.debug("Creating tempory folder");
         Path folder=createTempFolder();
         logger.debug("Folder created :"+folder.toAbsolutePath().toString());
 
@@ -328,7 +328,7 @@ public class NeoLoadHttpHandler {
         //----log for debuging the content of the files
         logger.debugfileContent(folder.toAbsolutePath().toString()+"/"+infoFilename);
         //----generating test json file--------------
-        NeoLoadRunDetails neoLoadRunDetails=new NeoLoadRunDetails(new Field("This Test corresponds to the "+context.getProjectName() +" scenario "+context.getScenarioName() +"[NeoLoad Web|"+context.gettestURL()+"]"));
+        NeoLoadRunDetails neoLoadRunDetails=new NeoLoadRunDetails(new Field("This Test corresponds to the "+context.getProjectName() +" scenario "+context.getScenarioName() ));
         Writer writer2 = new FileWriter(folder.toAbsolutePath().toString()+"/test_info.json");
         gsontofile.toJson(neoLoadRunDetails,writer2);
         writer2.flush();

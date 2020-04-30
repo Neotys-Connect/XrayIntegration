@@ -4,6 +4,7 @@ import com.neotys.ascode.swagger.client.model.ArrayOfSLAGlobalIndicatorDefinitio
 import com.neotys.ascode.swagger.client.model.ArrayOfSLAPerIntervalDefinition;
 import com.neotys.ascode.swagger.client.model.ArrayOfSLAPerTestDefinition;
 import com.neotys.ascode.swagger.client.model.TestStatistics;
+import com.neotys.xray.Logger.NeoLoadLogger;
 import com.neotys.xray.datamodel.NeoLoadXrayDescription;
 import com.sun.org.apache.xerces.internal.util.HTTPInputSource;
 
@@ -30,9 +31,9 @@ public class NeoLoadTestContext {
     private Optional<String> customRevistionid;
     private Optional<String> customPlanID;
     private Optional<String> customEnvironmentid;
+    private NeoLoadLogger logger;
 
-
-    public NeoLoadTestContext(String testid, String projectName, String scenarioName, String testname, long teststart, long testEnd, Optional<ArrayOfSLAGlobalIndicatorDefinition> arrayOfSLAGlobalIndicatorDefinitionOptional, Optional<ArrayOfSLAPerTestDefinition> arrayOfSLAPerTestDefinition, Optional<ArrayOfSLAPerIntervalDefinition> arrayOfSLAPerIntervalDefinition, NeoLoadXrayDescription description, String status,String neoLoadWebURL,TestStatistics statistics,Optional<String> customRevistionid,Optional<String> customPlanID,Optional<String> customEnvironmentid) {
+    public NeoLoadTestContext(String testid, String projectName, String scenarioName, String testname, long teststart, long testEnd, Optional<ArrayOfSLAGlobalIndicatorDefinition> arrayOfSLAGlobalIndicatorDefinitionOptional, Optional<ArrayOfSLAPerTestDefinition> arrayOfSLAPerTestDefinition, Optional<ArrayOfSLAPerIntervalDefinition> arrayOfSLAPerIntervalDefinition, NeoLoadXrayDescription description, String status, String neoLoadWebURL, TestStatistics statistics, Optional<String> customRevistionid, Optional<String> customPlanID, Optional<String> customEnvironmentid, NeoLoadLogger logger) {
         this.testid = testid;
         this.projectName = projectName;
         this.scenarioName = scenarioName;
@@ -49,6 +50,15 @@ public class NeoLoadTestContext {
         this.customEnvironmentid=customEnvironmentid;
         this.customPlanID=customPlanID;
         this.customRevistionid=customRevistionid;
+        this.logger=logger;
+    }
+
+    public NeoLoadLogger getLogger() {
+        return logger;
+    }
+
+    public void setLogger(NeoLoadLogger logger) {
+        this.logger = logger;
     }
 
     public Optional<String> getCustomRevistionid() {

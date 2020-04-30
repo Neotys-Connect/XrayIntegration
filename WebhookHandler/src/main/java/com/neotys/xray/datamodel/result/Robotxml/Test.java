@@ -4,6 +4,7 @@ import com.neotys.ascode.swagger.client.ApiException;
 import com.neotys.ascode.swagger.client.api.ResultsApi;
 import com.neotys.ascode.swagger.client.model.*;
 import com.neotys.xray.HttpResult.NeoLoadTestContext;
+import com.neotys.xray.Logger.NeoLoadLogger;
 import com.neotys.xray.common.NeoLoadUtils;
 
 import javax.annotation.Nullable;
@@ -124,34 +125,43 @@ public class Test {
     }
     public Test(NeoLoadTestContext context, ResultsApi resultsApi)
     {
+        NeoLoadLogger loadLogger;
+
         this.id=2;
         this.name=context.getScenarioName();
         this.kw=new ArrayList<>();
         String startdate= NeoLoadUtils.convertDateLongToString(context.getTeststart());
         String endate=NeoLoadUtils.convertDateLongToString(context.getTestEnd());
-
+        loadLogger=context.getLogger();
         //----transform the NL SLA into KW-------------
-        if(context.getArrayOfSLAGlobalIndicatorDefinitionOptional().isPresent())
-            addGlobalSLAIndicators(startdate,endate,context.getArrayOfSLAGlobalIndicatorDefinitionOptional().get());
-        if(context.getArrayOfSLAPerTestDefinition().isPresent())
-            addSLAPerTest(startdate,endate,context.getArrayOfSLAPerTestDefinition().get(),resultsApi,context.getTestid());
-        if(context.getArrayOfSLAPerIntervalDefinition().isPresent())
-            addSLAPerInterval(startdate,endate,context.getArrayOfSLAPerIntervalDefinition().get(),resultsApi,context.getTestid());
+        try {
+            loadLogger.debug("getting globla SLA");
+            if (context.getArrayOfSLAGlobalIndicatorDefinitionOptional().isPresent())
+                addGlobalSLAIndicators(startdate, endate, context.getArrayOfSLAGlobalIndicatorDefinitionOptional().get());
+            loadLogger.debug("getting SLA per test");
+            if (context.getArrayOfSLAPerTestDefinition().isPresent())
+                addSLAPerTest(startdate, endate, context.getArrayOfSLAPerTestDefinition().get(), resultsApi, context.getTestid(),context);
+            loadLogger.debug("getting SLA per time interval");
+            if (context.getArrayOfSLAPerIntervalDefinition().isPresent())
+                addSLAPerInterval(startdate, endate, context.getArrayOfSLAPerIntervalDefinition().get(), resultsApi, context.getTestid(), context);
 
-        Status status=new Status(context.getStatus(),startdate,endate,Optional.empty());
-        setStatus(Optional.of(status));
+            Status status = new Status(context.getStatus(), startdate, endate, Optional.empty());
+            setStatus(Optional.of(status));
+            loadLogger.debug("Status of the test is " + status.getContent());
+            List<String> taglist = new ArrayList<>();
+            taglist.add("neoload");
+            taglist.add("performance");
 
-        List<String> taglist =new ArrayList<>();
-        taglist.add("neoload");
-        taglist.add("performance");
-
-        if(context.getDescription().getTags().isPresent())
-        {
-            taglist.addAll(context.getDescription().getTags().get().stream().collect(Collectors.toList()));
+            if (context.getDescription().getTags().isPresent()) {
+                taglist.addAll(context.getDescription().getTags().get().stream().collect(Collectors.toList()));
+            }
+            Tags tags = new Tags();
+            tags.setTag(taglist);
+            setTags(Optional.ofNullable(tags));
         }
-        Tags tags=new Tags();
-        tags.setTag(taglist);
-        setTags(Optional.ofNullable(tags));
+        catch (Exception e) {
+            context.getLogger().error("Technical Error " + e.getMessage(),e);
+        }
 
     }
 
@@ -235,10 +245,12 @@ public class Test {
             return type+"."+userPathName+"."+definition.getName().replaceAll(" ","_")+"."+definition.getCategory().getValue();
 
     }
-    private void addSLAPerTest(String start, String end, ArrayOfSLAPerTestDefinition arrayOfSLAPerTestDefinition, ResultsApi resultsApi, String testid)
+    private void addSLAPerTest(String start, String end, ArrayOfSLAPerTestDefinition arrayOfSLAPerTestDefinition, ResultsApi resultsApi, String testid, NeoLoadTestContext context)
     {
-
+        context.getLogger().debug("Starting to retrieve SLA per test");
         arrayOfSLAPerTestDefinition.forEach(slaPerTestDefinition -> {
+                    context.getLogger().debug("working with sla " + slaPerTestDefinition.toString());
+
                     KW indicator=new KW();
 
                     indicator.setName(generateKWname(slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),SLA_TYPE_PERTEST));
@@ -256,9 +268,12 @@ public class Test {
                         indicator.setMsg(Optional.ofNullable(generateMessage("FAILED",slaPerTestDefinition.getFailedThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level,null)));
                     else
                     {
-                        if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("WARNING"))
-                            indicator.setMsg(Optional.ofNullable(generateMessage("WARNING",slaPerTestDefinition.getWarningThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level,null)));
-
+                        if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("WARNING")) {
+                            if(slaPerTestDefinition.getWarningThreshold()!=null)
+                                 indicator.setMsg(Optional.ofNullable(generateMessage("WARNING", slaPerTestDefinition.getWarningThreshold(), slaPerTestDefinition.getValue(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level, null)));
+                            else
+                                indicator.setMsg(Optional.ofNullable(generateMessage("WARNING", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getValue(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level, null)));
+                        }
                         else
                             indicator.setMsg(Optional.ofNullable(generateMessage("FAILED",slaPerTestDefinition.getFailedThreshold(),slaPerTestDefinition.getValue(),slaPerTestDefinition.getElement(),slaPerTestDefinition.getKpi(),level,null)));
 
@@ -294,7 +309,7 @@ public class Test {
 
         return result;
     }
-    private void    addSLAPerInterval(String start, String end, ArrayOfSLAPerIntervalDefinition arrayOfSLAPerIntervalDefinition, ResultsApi resultsApi, String testid)
+    private void    addSLAPerInterval(String start, String end, ArrayOfSLAPerIntervalDefinition arrayOfSLAPerIntervalDefinition, ResultsApi resultsApi, String testid, NeoLoadTestContext context)
     {
         arrayOfSLAPerIntervalDefinition.forEach(slaPerTestDefinition -> {
                     KW indicator=new KW();
@@ -317,15 +332,20 @@ public class Test {
                               max=values.getMaxDuration();
                               max=max/1000;
                          } catch (ApiException e) {
-                             e.printStackTrace();
+                             context.getLogger().error("Technical error :"+e.getMessage(),e);
                          }
 
                      }
                      if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("FAILED")) {
                          indicator.setMsg(Optional.ofNullable(generateMessage("FAILED", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getFailed(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level,max)));
                      }
-                     if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("WARNING"))
-                         indicator.setMsg(Optional.ofNullable(generateMessage("WARNING", slaPerTestDefinition.getWarningThreshold(), slaPerTestDefinition.getWarning(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level,max)));
+                     if(slaPerTestDefinition.getStatus().getValue().equalsIgnoreCase("WARNING")) {
+                         if(slaPerTestDefinition.getWarningThreshold()!=null)
+                             indicator.setMsg(Optional.ofNullable(generateMessage("WARNING", slaPerTestDefinition.getWarningThreshold(), slaPerTestDefinition.getWarning(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level, max)));
+                         else
+                             indicator.setMsg(Optional.ofNullable(generateMessage("WARNING", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getWarning(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level, max)));
+
+                     }
                      else
                          indicator.setMsg(Optional.ofNullable(generateMessage("FAILED", slaPerTestDefinition.getFailedThreshold(), slaPerTestDefinition.getFailed(), slaPerTestDefinition.getElement(), slaPerTestDefinition.getKpi(), level,max)));
 
