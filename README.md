@@ -10,9 +10,9 @@ This custom action will allow you to add all the project information required in
    * `Version` (Optional): Version of the application in Jira/Xray
    * `Revision` (Optional) : Revision number
    * `TestPlan` (Optional) : Test Plan issue key
-   * `Tags` (Optional) : Tag to add in the test results in Xray/Jira
+   * `Tags` (Optional) : Tags to add as labels in the Test in Xray/Jira, or to reference existing requirement or Test
    * `FixVersions` (Optional) : Version of the project in Xray/Jira
-   * `Environment` (Optional) : TestEnvironment of the test results
+   * `Environment` (Optional) : Test Environment of the test results
    * `CustomFields` (Optional) : CustomFields required to import tests results in Xray/Jira
 
 Depending on the settings of your Xray Projet, you would have to precize more or less fields .
@@ -66,9 +66,9 @@ The XrayContext Population would need to be added to your NeoLoad scenario with 
 | `Version`  (Optional) |  Version of the project |
 | `Revision` (optional)  |  Revision number |
 | `TestPlan` (Optional) |  Test Plan issue key to link the results (i.e. Test Execution) to |
-| `Tags` (Optional) | Tag to reference the test result in Jira. Format : tag1,tag2,...,etc |
+| `Tags` (Optional) | Tags to add as labels in the Test in Jira. Format : tag1,tag2,...,etc.<br>If the tag references a performance-related requirement issue by its key, a link will be created between the Test and the requirement.<br>If the tag references an existing Test by its key, then results will be reported against the given Test.|
 | `FixVersions` (Optional) | Version of the project in Jira|
-| `Environment` (Optional) | Environment of the application  |
+| `Environment` (Optional) | Test Environment of the test results |
 | `CustomFields` (Optional) | JsonObject with all the required custom fields required to import test results in Jira |
 
 
