@@ -132,7 +132,7 @@ docker-compose -f <docker file> up -d
 #### Configure the WebHook in your NeoLoad Web Account to send a notification to your WebHook service
 
 The webhookhandler service is listenning to 2 disctinct endpoints :
-* `/Health` : Get request build to check if the webhookhandler is up
+* `/health` : Get request build to check if the webhookhandler is up
 * `/webhook` : POST request to receive the webhook from NeoLoad WEB
 
 The Webhookhandler is expecting the following Json Payload :
@@ -154,7 +154,7 @@ To configure the webhook in NeoLoad WEB you will need to :
 7. Payload :
 ```json
 {
-            "testid": "$(test_id)",
+            "testid": "$(test_result_id)",
             "url_graph_overview": "$(url_graph_overview)",
             "maxvu" : "$(test_max_nb_vus)"
 }
