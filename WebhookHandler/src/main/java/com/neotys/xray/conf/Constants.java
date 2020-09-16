@@ -4,8 +4,9 @@ public class Constants {
 
     public static final String HEALTH_PATH="/health";
     public static final String WEBHOOKPATH="/webhook";
-    public static final String DEFAULT_NL_SAAS_API_URL="";
-    public static final String DEFAULT_NL_WEB_API_URL="";
+    public static final String DEFAULT_NL_SAAS_API_URL="neoload-api.saas.neotys.com";
+    public static final String DEFAULT_NL_API_PORT="443";
+    public static final String DEFAULT_NL_WEB_API_URL="neoload.saas.neotys.com";
     public static final String API_URL_VERSION="/v1";
     public static final String TESTID_KEY="testid";
     public static final String MAX_VU_KEY="maxvu";
@@ -27,6 +28,7 @@ public class Constants {
     public static final String SECRET_PASSWORD="password";
     public static final String SECRET_CLIENTID="client_id";
     public static final String SECRET_CLIENT_SECRET="client_secret";
+    public static final String SECRET_NL_API_PORT="NL_API_PORT";
     public static final String DEFAULT_CLOUD_PORT="443";
     public static final String SECRET_CUSTOMFIELD_REVISION="CustomFieldRevision";
     public static final String SECRET_CUSTOMFIELD_TESTPLAN="CustomFieldTestPlan";

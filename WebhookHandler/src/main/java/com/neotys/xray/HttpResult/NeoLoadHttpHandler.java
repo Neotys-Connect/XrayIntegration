@@ -46,6 +46,7 @@ public class NeoLoadHttpHandler {
     private String testid;
     private Optional<String> neoload_Web_Url;
     private Optional<String> neoload_API_Url;
+    private Optional<String> neoload_API_PORT;
     private String neoload_API_key;
     private NeoLoadLogger logger;
     private ApiClient apiClient;
@@ -268,10 +269,29 @@ public class NeoLoadHttpHandler {
         return url;
     }
     private List<MultiFormOject> generateResultsFiles() throws ApiException, JAXBException, IOException, JsonSyntaxException, NeoLoadException {
+        logger.debug("Starting to generate Results files");
         List<MultiFormOject> resultfiles=new ArrayList<>();
-        statistics= this.resultsApi.getTestStatistics(testid);
+        logger.debug("Geting test statistics of "+testid);
+
+        try {
+            statistics = this.resultsApi.getTestStatistics(testid);
+        }
+        catch (ApiException e)
+        {
+
+                logger.error("Getting API error  "+e.getCode()+" body + "+e.getResponseBody() ,e);
+                 throw new NeoLoadException("Getting API error  "+e.getCode()+" body + "+e.getResponseBody() );
 
 
+        }
+        catch (Exception e)
+        {
+            logger.error("Technical error " ,e);
+            throw new NeoLoadException("Techncial error ");
+
+        }
+
+        logger.debug("Geting test description field  of test "+testid);
 
         NeoLoadXrayDescription jsondesription=getXrayDescriptionFromTest(getTestDescription());
         if(jsondesription==null)
@@ -338,6 +358,7 @@ public class NeoLoadHttpHandler {
         //---------------------------------------
         logger.debugfileContent(folder.toAbsolutePath().toString()+"/test_info.json");
 
+        logger.debug("Results files generated");
         return resultfiles;
 
     }
@@ -449,10 +470,10 @@ public class NeoLoadHttpHandler {
 
     private void generateApiUrl()
     {
-        if(neoload_API_Url.isPresent())
+        if(neoload_API_Url.isPresent()&&neoload_API_PORT.isPresent())
         {
             if(!neoload_API_Url.get().contains(API_URL_VERSION))
-                neoload_API_Url=Optional.of(neoload_API_Url.get()+API_URL_VERSION);
+                neoload_API_Url=Optional.of(neoload_API_Url.get()+":"+neoload_API_PORT.get()+API_URL_VERSION);
         }
     }
     private void getEnvVariables() throws NeoLoadException {
@@ -464,6 +485,10 @@ public class NeoLoadHttpHandler {
             logger.error("No API key defined");
             throw new NeoLoadException("No API key is defined");
         }
+        neoload_API_PORT=Optional.ofNullable(System.getenv(SECRET_NL_API_PORT)).filter(o->!o.isEmpty());
+        if(!neoload_API_PORT.isPresent())
+            neoload_API_PORT=Optional.of(DEFAULT_NL_API_PORT);
+
         neoload_API_Url= Optional.ofNullable(System.getenv(SECRET_NL_API_HOST)).filter(o->!o.isEmpty());
         if(!neoload_API_Url.isPresent())
             neoload_API_Url=Optional.of(DEFAULT_NL_SAAS_API_URL);

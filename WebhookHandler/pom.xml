@@ -20,6 +20,7 @@
         <NL_API_HOST>neoload-api.saas.com</NL_API_HOST>
         <NL_API_TOKEN>15304f743f34ca33c458927a40945b7424a2066b95563774</NL_API_TOKEN>
         <port>8080</port>
+        <apiport>443</apiport>
         <ssl>true</ssl>
         <CustomFieldRevision>customfield_10100</CustomFieldRevision>
         <CustomFieldEnvironement>customfield_11805</CustomFieldEnvironement>
@@ -127,6 +128,7 @@
                             <NL_WEB_HOST>${NL_WEB_HOST}</NL_WEB_HOST>
                             <NL_API_HOST>${NL_API_HOST}</NL_API_HOST>
                             <NL_API_TOKEN>${NL_API_TOKEN}</NL_API_TOKEN>
+                            <NL_API_PORT>${apiport}</NL_API_PORT>
                             <PORT>${port}</PORT>
                             <ssl>${ssl}</ssl>
                         </environment>
