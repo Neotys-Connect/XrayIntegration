@@ -33,6 +33,7 @@ public class Constants {
     public static final String SECRET_CUSTOMFIELD_REVISION="CustomFieldRevision";
     public static final String SECRET_CUSTOMFIELD_TESTPLAN="CustomFieldTestPlan";
     public static final String SECRET_CUSTOMFIELD_ENVIRONMENT="CustomFieldEnvironement";
+    public static final String SECRET_JIRA_API_PATH="jira_onprem_apipath";
     public static final String SLA_TYPE_PERINTERVAL="PerTimeInterval";
     public static final String SLA_TYPE_PERTEST="PerRun";
 

@@ -27,6 +27,7 @@ public class Httpclient {
     private NeoLoadLogger logger;
     private int serverport;
     private String serverhost;
+    private Optional<String> api_path;
 
     public Httpclient(Vertx vertx,boolean ssl) {
         this.vertx=vertx;
@@ -101,7 +102,6 @@ public class Httpclient {
                         {
                             logger.error("Error to get the response " ,handler.cause());
                             future.fail("Error to get the response " + handler.cause().getMessage());
-
                         }
                     }
 

@@ -60,6 +60,7 @@ public class NeoLoadHttpHandler {
     private Optional<String> client_secret;
     private Optional<String> user;
     private Optional<String> password;
+    private Optional<String> jira_API_PATH;
     private ResultsApi resultsApi;
     private Optional<String> customfield_Testplan;
     private Optional<String> customfield_Environment;
@@ -199,8 +200,13 @@ public class NeoLoadHttpHandler {
                 client.setServerhost(managedHost.get());
                 header.put("Content-Type","multipart/form-data");
 
+                String path;
+                if(jira_API_PATH.isPresent())
+                    path=jira_API_PATH.get()+XRAY_URL_ONPREM_MULTIPART;
+                else
+                    path=XRAY_URL_ONPREM_MULTIPART;
                 //----sending resutls to xray----------
-                Future<JsonObject> response=client.sendMultiPartObjects(XRAY_URL_ONPREM_MULTIPART,header,multiFormOjects,user,password);
+                Future<JsonObject> response=client.sendMultiPartObjects(path,header,multiFormOjects,user,password);
                 //--------------------------------------
                 response.setHandler(result->{
                     if(result.succeeded())
@@ -506,6 +512,8 @@ public class NeoLoadHttpHandler {
             ssl=false;
 
         this.isCloud=false;
+
+        jira_API_PATH=Optional.ofNullable(System.getenv(SECRET_JIRA_API_PATH)).filter(o->!o.isEmpty());
 
         managedHost=Optional.ofNullable(System.getenv(SECRET_MANAGED_HOST)).filter(o->!o.isEmpty());
         if(managedHost.isPresent())
