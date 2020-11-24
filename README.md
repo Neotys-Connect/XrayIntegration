@@ -29,7 +29,7 @@ XrayContext will update the test results in NeoLoad web with all the information
 | NeoLoad  | 7.0 (Enterprise or Professional Edition w/ Integration & Advanced Usage and NeoLoad Web option required)|
 | Requirements | NeoLoad Web |
 | Bundled in NeoLoad | No
-| Download Binaries | <ul><li>[latest release]() is only compatible with NeoLoad from version 7.0</li><li> Use this [release](https://github.com/Neotys-Labs/Dynatrace/releases/tag/Neotys-Labs%2FDynatrace.git-2.0.10) for previous NeoLoad versions</li></ul>|
+| Download Binaries | <ul><li>[latest release]() is only compatible with NeoLoad from version 7.2</li></ul>|
 
 ### Installation
 
