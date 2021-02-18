@@ -76,7 +76,7 @@ The XrayContext Population would need to be added to your NeoLoad scenario with 
 ## WebHook Handler
 
 ### Configuration
-The webhook handler is a web service package in a container : `hrexed/neoload_xrayresultsync`
+The webhook handler is a web service package in a container : `neotyspartnersolution/neoload_xrayresultsync`
 The container will required different type of Environment variables depending if you are using :
 1. Jira Cloud
 1. Jira On premise

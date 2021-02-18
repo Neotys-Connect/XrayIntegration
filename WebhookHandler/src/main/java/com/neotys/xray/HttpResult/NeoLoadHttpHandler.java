@@ -76,6 +76,7 @@ public class NeoLoadHttpHandler {
     private String maxVu;
     private String testoverviewpng;
     private boolean ssl;
+    private String nl_api_host;
 
     public NeoLoadHttpHandler(String testid, String maxVu, String urlpngoverview) throws NeoLoadException {
         this.testid=testid;
@@ -87,6 +88,7 @@ public class NeoLoadHttpHandler {
 
         apiClient=new ApiClient();
         apiClient.setBasePath(HTTPS+neoload_API_Url.get());
+
         apiClient.setApiKey(neoload_API_key);
         resultsApi=new ResultsApi(apiClient);
         testoverviewpng=urlpngoverview;
@@ -129,132 +131,145 @@ public class NeoLoadHttpHandler {
         Httpclient client=new Httpclient(vertx,ssl);
         HashMap<String,String> header=new HashMap<>();
 
-        try{
-            List<MultiFormOject> multiFormOjects=generateResultsFiles();
-            if(isCloud)
-            {
-                logger.debug("Interacting with JIRA CLOUD");
-               //----genereate the auth token
-                Future<String> token=generateCloudAuth(header,client);
-                token.setHandler(result->{
-                    if(result.succeeded())
-                    {
+        Future<Boolean> testapi=testAPIConnectivity(vertx);
+        testapi.setHandler(booleanAsyncResult -> {
+           if(booleanAsyncResult.succeeded())
+           {
+               try{
 
-                        header.put("Authorization","Bearer "+result.result().replaceAll("\"",""));
-                        header.put("Content-Type","multipart/form-data");
-                        //----sending resutls to xray----------
-                        Future<JsonObject> response = Future.future();
-                        try {
-                            response = client.sendMultiPartObjects(XRAY_URL_ROBOT_CLOUD_MULTIPART,header,multiFormOjects,user,password);
-                        } catch (HttpException e) {
-                            futureresult.fail(e);
-                        }
-                        //--------------------------------------
-                        if(response!=null) {
-                            response.setHandler(obj -> {
-                                if (obj.succeeded()) {
-                                    JsonObject data = obj.result();
-                                    if (data.containsKey("key")) {
-                                        //-----updating neoload test witht he jira link-----------
-                                        String key = data.getString("key");
-                                        logger.debug("Issue id foud : "+key);
-                                        TestUpdateRequest updateRequest = new TestUpdateRequest();
-                                        updateRequest.description("Jira results : " + generateJiraURL(key));
-                                        logger.debug("URL to reach issue : "+updateRequest.getDescription());
-                                        try {
-                                            resultsApi.updateTest(updateRequest, testid);
-                                            futureresult.complete(true);
-                                        } catch (ApiException e) {
-                                            futureresult.fail(e);
-                                        }
+                   List<MultiFormOject> multiFormOjects=generateResultsFiles();
+                   if(isCloud)
+                   {
+                       logger.debug("Interacting with JIRA CLOUD");
+                       //----genereate the auth token
+                       Future<String> token=generateCloudAuth(header,client);
+                       token.setHandler(result->{
+                           if(result.succeeded())
+                           {
 
-                                    } else {
-                                        logger.error("No issue id has been created in Jira");
-                                        futureresult.fail(
-                                         new NeoLoadException("No Issue has been created in Jira - " + obj.result().toString()))
-                                        ;
-                                    }
-                                } else {
-                                    logger.error("The test results has not been processed");
-                                    futureresult.fail(  new NeoLoadException("The test results has not been processed"))
-                                    ;
+                               header.put("Authorization","Bearer "+result.result().replaceAll("\"",""));
+                               header.put("Content-Type","multipart/form-data");
+                               //----sending resutls to xray----------
+                               Future<JsonObject> response = Future.future();
+                               try {
+                                   response = client.sendMultiPartObjects(XRAY_URL_ROBOT_CLOUD_MULTIPART,header,multiFormOjects,user,password);
+                               } catch (HttpException e) {
+                                   futureresult.fail(e);
+                               }
+                               //--------------------------------------
+                               if(response!=null) {
+                                   response.setHandler(obj -> {
+                                       if (obj.succeeded()) {
+                                           JsonObject data = obj.result();
+                                           if (data.containsKey("key")) {
+                                               //-----updating neoload test witht he jira link-----------
+                                               String key = data.getString("key");
+                                               logger.debug("Issue id foud : "+key);
+                                               TestUpdateRequest updateRequest = new TestUpdateRequest();
+                                               updateRequest.description("Jira results : " + generateJiraURL(key));
+                                               logger.debug("URL to reach issue : "+updateRequest.getDescription());
+                                               try {
+                                                   resultsApi.updateTest(updateRequest, testid);
+                                                   futureresult.complete(true);
+                                               } catch (ApiException e) {
+                                                   futureresult.fail(e);
+                                               }
 
-                                }
-                            });
-                        }
-                        else
-                        {
-                            futureresult.fail("Issue to send the files");
-                        }
-                    }
-                    else
-                    {
-                        futureresult.fail(result.cause());
-                    }
-                });
-            }
-            else
-            {
-                logger.debug("Interacting with JIRA on prem");
-                client.setServerport(Integer.parseInt(managedport.get()));
-                client.setServerhost(managedHost.get());
-                header.put("Content-Type","multipart/form-data");
+                                           } else {
+                                               logger.error("No issue id has been created in Jira");
+                                               futureresult.fail(
+                                                       new NeoLoadException("No Issue has been created in Jira - " + obj.result().toString()))
+                                               ;
+                                           }
+                                       } else {
+                                           logger.error("The test results has not been processed");
+                                           futureresult.fail(  new NeoLoadException("The test results has not been processed"))
+                                           ;
 
-                String path;
-                if(jira_API_PATH.isPresent())
-                    path=jira_API_PATH.get()+XRAY_URL_ONPREM_MULTIPART;
-                else
-                    path=XRAY_URL_ONPREM_MULTIPART;
-                //----sending resutls to xray----------
-                Future<JsonObject> response=client.sendMultiPartObjects(path,header,multiFormOjects,user,password);
-                //--------------------------------------
-                response.setHandler(result->{
-                    if(result.succeeded())
-                    {
-                        JsonObject data=result.result();
-                        if(data.containsKey("testExecIssue")) {
-                            JsonObject issueObject=data.getJsonObject("testExecIssue");
-                            if (issueObject.containsKey("key")) {
-                                //-----updating neoload test witht he jira link-----------
-                                String key = issueObject.getString("key");
-                                logger.debug("Issue id found : " + key);
-                                TestUpdateRequest updateRequest = new TestUpdateRequest();
-                                updateRequest.description("Jira results : " + generateJiraURL(key));
-                                logger.debug("URL to reach issue : " + updateRequest.getDescription());
-                                try {
-                                    resultsApi.updateTest(updateRequest, testid);
-                                    futureresult.complete(true);
-                                } catch (ApiException e) {
-                                    futureresult.fail(e);
-                                }
+                                       }
+                                   });
+                               }
+                               else
+                               {
+                                   futureresult.fail("Issue to send the files");
+                               }
+                           }
+                           else
+                           {
+                               futureresult.fail(result.cause());
+                           }
+                       });
+                   }
+                   else
+                   {
+                       logger.debug("Interacting with JIRA on prem");
+                       client.setServerport(Integer.parseInt(managedport.get()));
+                       client.setServerhost(managedHost.get());
+                       header.put("Content-Type","multipart/form-data");
 
-                            }
-                            else
-                            {
-                                logger.error("No issue id has been created in Jira");
-                                futureresult.fail( new NeoLoadException("No Issue has been created in Jira - "+ response.toString()));
-                            }
-                        }
-                        else
-                        {
-                            logger.error("No issue id has been created in Jira");
-                            futureresult.fail( new NeoLoadException("No Issue has been created in Jira - "+ response.toString()));
-                        }
-                    }
-                    else
-                    {
-                        logger.error("The test results has not been processed");
-                        futureresult.fail( new NeoLoadException("The test results has not been processed"));
+                       String path;
+                       if(jira_API_PATH.isPresent())
+                           path=jira_API_PATH.get()+XRAY_URL_ONPREM_MULTIPART;
+                       else
+                           path=XRAY_URL_ONPREM_MULTIPART;
+                       //----sending resutls to xray----------
+                       Future<JsonObject> response=client.sendMultiPartObjects(path,header,multiFormOjects,user,password);
+                       //--------------------------------------
+                       response.setHandler(result->{
+                           if(result.succeeded())
+                           {
+                               JsonObject data=result.result();
+                               if(data.containsKey("testExecIssue")) {
+                                   JsonObject issueObject=data.getJsonObject("testExecIssue");
+                                   if (issueObject.containsKey("key")) {
+                                       //-----updating neoload test witht he jira link-----------
+                                       String key = issueObject.getString("key");
+                                       logger.debug("Issue id found : " + key);
+                                       TestUpdateRequest updateRequest = new TestUpdateRequest();
+                                       updateRequest.description("Jira results : " + generateJiraURL(key));
+                                       logger.debug("URL to reach issue : " + updateRequest.getDescription());
+                                       try {
+                                           resultsApi.updateTest(updateRequest, testid);
+                                           futureresult.complete(true);
+                                       } catch (ApiException e) {
+                                           futureresult.fail(e);
+                                       }
 
-                    }
-                });
-            }
+                                   }
+                                   else
+                                   {
+                                       logger.error("No issue id has been created in Jira");
+                                       futureresult.fail( new NeoLoadException("No Issue has been created in Jira - "+ response.toString()));
+                                   }
+                               }
+                               else
+                               {
+                                   logger.error("No issue id has been created in Jira");
+                                   futureresult.fail( new NeoLoadException("No Issue has been created in Jira - "+ response.toString()));
+                               }
+                           }
+                           else
+                           {
+                               logger.error("The test results has not been processed");
+                               futureresult.fail( new NeoLoadException("The test results has not been processed"));
 
-        }
-        catch (Exception e)
-        {
-            futureresult.fail(e);
-        }
+                           }
+                       });
+                   }
+
+               }
+               catch (Exception e)
+               {
+                   futureresult.fail(e);
+               }
+           }
+           else
+           {
+               futureresult.fail(booleanAsyncResult.cause());
+           }
+        });
+
+
 
         return futureresult;
     }
@@ -274,21 +289,41 @@ public class NeoLoadHttpHandler {
 
         return url;
     }
+
+    private Future<Boolean> testAPIConnectivity(Vertx vertx)
+    {
+        Future<Boolean> future=Future.future();
+        Httpclient client=new Httpclient(vertx,ssl);
+        Future<String> stringFuture=client.sendGetRequest(nl_api_host,neoload_API_PORT.get(),"/explore/",ssl);
+        stringFuture.setHandler(stringAsyncResult -> {
+            if(stringAsyncResult.succeeded())
+            {
+                logger.debug("Able to get response from the api "+stringAsyncResult.result());
+                future.complete(true);
+            }
+            else
+                logger.error("Unable to reach the api ",stringAsyncResult.cause());
+                future.fail(stringAsyncResult.cause());
+        });
+
+        return future;
+    }
+
     private List<MultiFormOject> generateResultsFiles() throws ApiException, JAXBException, IOException, JsonSyntaxException, NeoLoadException {
         logger.debug("Starting to generate Results files");
         List<MultiFormOject> resultfiles=new ArrayList<>();
         logger.debug("Geting test statistics of "+testid);
 
         try {
+
+
             statistics = this.resultsApi.getTestStatistics(testid);
+
         }
         catch (ApiException e)
         {
-
-                logger.error("Getting API error  "+e.getCode()+" body + "+e.getResponseBody() ,e);
-                 throw new NeoLoadException("Getting API error  "+e.getCode()+" body + "+e.getResponseBody() );
-
-
+            logger.error("Getting API error  "+e.getCode()+" body + "+e.getResponseBody() ,e);
+            throw new NeoLoadException("Getting API error  "+e.getCode()+" body + "+e.getResponseBody() );
         }
         catch (Exception e)
         {
@@ -478,9 +513,11 @@ public class NeoLoadHttpHandler {
     {
         if(neoload_API_Url.isPresent()&&neoload_API_PORT.isPresent())
         {
+            nl_api_host=neoload_API_Url.get();
             if(!neoload_API_Url.get().contains(API_URL_VERSION))
                 neoload_API_Url=Optional.of(neoload_API_Url.get()+":"+neoload_API_PORT.get()+API_URL_VERSION);
         }
+        logger.debug("API url for nl web : "+neoload_API_Url.get());
     }
     private void getEnvVariables() throws NeoLoadException {
 

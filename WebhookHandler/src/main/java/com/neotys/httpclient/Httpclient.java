@@ -8,12 +8,14 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.multipart.MultipartForm;
 
+import javax.net.ssl.TrustManagerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +34,7 @@ public class Httpclient {
     public Httpclient(Vertx vertx,boolean ssl) {
         this.vertx=vertx;
 
-        client=WebClient.create(vertx,new WebClientOptions().setSsl(ssl).setLogActivity(true));
+        client=WebClient.create(vertx,new WebClientOptions().setSsl(ssl).setVerifyHost(false).setLogActivity(true).setFollowRedirects(true).setTrustAll(true));
         logger=new NeoLoadLogger(this.getClass().getName());
 
     }
@@ -58,6 +60,40 @@ public class Httpclient {
         this.serverhost = serverhost;
     }
 
+    public Future<String> sendGetRequest(String serverhost, String serverport ,String uri,boolean ssl)
+    {
+
+        Future<String> future=Future.future();
+
+        HttpRequest<Buffer> request=client.get(Integer.parseInt(serverport),serverhost,uri).ssl(ssl);
+
+        request.send(httpResponseAsyncResult -> {
+           if(httpResponseAsyncResult.succeeded())
+           {
+               logger.debug("Request sent successfuly - uri :"+uri);
+               logger.debug("Received the following response :"+ httpResponseAsyncResult.result().bodyAsString() +" with the message "+httpResponseAsyncResult.result().statusMessage() );
+
+               future.complete(httpResponseAsyncResult.result().bodyAsString());
+           }
+           else
+           {
+               logger.debug("Unable to get a sucessful response");
+               if(httpResponseAsyncResult.result()!=null) {
+                   future.fail("Response code :" + httpResponseAsyncResult.result().statusCode() + " and response  " + httpResponseAsyncResult.result().bodyAsString());
+                   logger.error("Response code :" + httpResponseAsyncResult.result().statusCode() + " and response  " + httpResponseAsyncResult.result().bodyAsString());
+               }
+               else
+               {
+                   logger.error("Error to get the response " ,httpResponseAsyncResult.cause());
+                   future.fail("Error to get the response " + httpResponseAsyncResult.cause().getMessage());
+               }
+
+           }
+       });
+
+        return future;
+    }
+
     public Future<JsonObject> sendMultiPartObjects(String uri, HashMap<String,String> headers, List<MultiFormOject> object, Optional<String> user, Optional<String> password) throws HttpException {
 
         Future<JsonObject> future=Future.future();
@@ -80,7 +116,12 @@ public class Httpclient {
         if(user.isPresent()&& password.isPresent())
         {
             request.basicAuthentication(user.get(),password.get());
+            logger.debug("Basic auth added username" +user.get()+" pass "+password.get());
         }
+
+
+        logger.debug("preparing the request " +uri +" with payload"+object.toString());
+        logger.debug("Jira server :"+this.serverhost+" port " + String.valueOf(serverport));
         request.putHeaders(header)
                 .sendMultipartForm(form,handler->{
                     if(handler.succeeded())
