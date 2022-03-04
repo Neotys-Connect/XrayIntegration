@@ -109,6 +109,10 @@ public  class NeoLoadLogger {
         loger.log(Level.WARNING,s);
     }
 
+    public void warn(String s, Throwable th){
+        loger.log(Level.WARNING,s,th);
+    }
+
 
     public void debug(String s) {
         loger.log(Level.FINE,s);

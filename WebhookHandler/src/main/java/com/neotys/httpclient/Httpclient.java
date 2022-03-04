@@ -6,223 +6,249 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.TrustOptions;
+import io.vertx.core.net.ProxyOptions;
+import io.vertx.core.net.ProxyType;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.multipart.MultipartForm;
 
-import javax.net.ssl.TrustManagerFactory;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 public class Httpclient {
 
-    private WebClient client;
-    private Vertx vertx;
-    private NeoLoadLogger logger;
-    private int serverport;
-    private String serverhost;
-    private Optional<String> api_path;
+	public static final String UTF_8 = StandardCharsets.UTF_8.toString();
+	private WebClient client;
+	private final NeoLoadLogger LOGGER;
+	private int serverPort;
+	private String serverHost;
 
-    public Httpclient(Vertx vertx,boolean ssl) {
-        this.vertx=vertx;
+	public Httpclient(Vertx vertx, boolean ssl) {
+		this(vertx, ssl, false);
+	}
 
-        client=WebClient.create(vertx,new WebClientOptions().setSsl(ssl).setVerifyHost(false).setLogActivity(true).setFollowRedirects(true).setTrustAll(true));
-        logger=new NeoLoadLogger(this.getClass().getName());
+	public Httpclient(Vertx vertx, boolean ssl, boolean useProxy) {
+		client = WebClient.create(vertx, generateClientOption(ssl, useProxy));
+		LOGGER = new NeoLoadLogger(this.getClass().getName());
 
-    }
+	}
 
-    public void setSsl(boolean ssl)
-    {
+	private WebClientOptions generateClientOption(boolean ssl, boolean useProxy) {
+		final WebClientOptions webClientOptions = new WebClientOptions()
+				.setSsl(ssl)
+				.setVerifyHost(false)
+				.setLogActivity(true)
+				.setFollowRedirects(true)
+				.setTrustAll(true);
+		if (useProxy) {
+			configureProxy(webClientOptions, ssl);
+		}
+		return webClientOptions;
+	}
 
-    }
-
-    public int getServerport() {
-        return serverport;
-    }
-
-    public void setServerport(int serverport) {
-        this.serverport = serverport;
-    }
-
-    public String getServerhost() {
-        return serverhost;
-    }
-
-    public void setServerhost(String serverhost) {
-        this.serverhost = serverhost;
-    }
-
-    public Future<String> sendGetRequest(String serverhost, String serverport ,String uri,boolean ssl)
-    {
-
-        Future<String> future=Future.future();
-
-        HttpRequest<Buffer> request=client.get(Integer.parseInt(serverport),serverhost,uri).ssl(ssl);
-
-        request.send(httpResponseAsyncResult -> {
-           if(httpResponseAsyncResult.succeeded())
-           {
-               logger.debug("Request sent successfuly - uri :"+uri);
-               logger.debug("Received the following response :"+ httpResponseAsyncResult.result().bodyAsString() +" with the message "+httpResponseAsyncResult.result().statusMessage() );
-
-               future.complete(httpResponseAsyncResult.result().bodyAsString());
-           }
-           else
-           {
-               logger.debug("Unable to get a sucessful response");
-               if(httpResponseAsyncResult.result()!=null) {
-                   future.fail("Response code :" + httpResponseAsyncResult.result().statusCode() + " and response  " + httpResponseAsyncResult.result().bodyAsString());
-                   logger.error("Response code :" + httpResponseAsyncResult.result().statusCode() + " and response  " + httpResponseAsyncResult.result().bodyAsString());
-               }
-               else
-               {
-                   logger.error("Error to get the response " ,httpResponseAsyncResult.cause());
-                   future.fail("Error to get the response " + httpResponseAsyncResult.cause().getMessage());
-               }
-
-           }
-       });
-
-        return future;
-    }
-
-    public Future<JsonObject> sendMultiPartObjects(String uri, HashMap<String,String> headers, List<MultiFormOject> object, Optional<String> user, Optional<String> password) throws HttpException {
-
-        Future<JsonObject> future=Future.future();
-        if(object==null && object.size()<=1 )
-        {
-            logger.error("The files to send is null ");
-            throw new HttpException("The MultiPart request needs a list one file ");
-        }
-
-        HttpRequest<Buffer> request = client.post(serverport,serverhost,uri);
+	private void configureProxy(final WebClientOptions webClientOptions, boolean ssl) {
+		final String proxyEnvironment = ssl ? "https_proxy" : "http_proxy";
+		final String proxySettings = System.getenv(proxyEnvironment);
+		if (isNotNullAndNotEmpty(proxySettings)) {
+			final ProxyOptions proxyOptions = new ProxyOptions();
+			proxyOptions.setType(ProxyType.HTTP);
+			try {
+				final URI url = URI.create(proxySettings);
+				decorateWithCredentials(url, proxyOptions);
+				proxyOptions.setHost(url.getHost());
+				if (url.getPort() >= 0) {
+					proxyOptions.setPort(url.getPort());
+				}
+				webClientOptions.setProxyOptions(proxyOptions);
+			} catch (Exception e) {
+				LOGGER.warn("Exception occurs on proxy settings", e);
+			}
+		}
+	}
 
 
-        MultipartForm form=MultipartForm.create();
-        object.stream().forEach(multiFormOject -> {
-            form.binaryFileUpload(multiFormOject.getParameterName(),multiFormOject.getFilename(),multiFormOject.getPath(),multiFormOject.getContentType());
-                  });
-
-        MultiMap header=((HttpRequest) request).headers();
-        header.addAll(headers);
-        if(user.isPresent()&& password.isPresent())
-        {
-            request.basicAuthentication(user.get(),password.get());
-            logger.debug("Basic auth added username" +user.get()+" pass "+password.get());
-        }
+	private boolean isNotNullAndNotEmpty(String proxySettings) {
+		return proxySettings != null && !proxySettings.isEmpty();
+	}
 
 
-        logger.debug("preparing the request " +uri +" with payload"+object.toString());
-        logger.debug("Jira server :"+this.serverhost+" port " + String.valueOf(serverport));
-        request.putHeaders(header)
-                .sendMultipartForm(form,handler->{
-                    if(handler.succeeded())
-                    {
-                        logger.debug("Request sent successfuly - uri :"+uri+" payload :"+object.toString());
-                        logger.debug("Received the following response :"+ handler.result().bodyAsString() +" with the message "+handler.result().statusMessage() );
+	private void decorateWithCredentials(URI url, final ProxyOptions proxyOptions) throws UnsupportedEncodingException {
+		final String userInfo = url.getRawUserInfo();
+		if (isNotNullAndNotEmpty(userInfo)) {
+			final String[] split = userInfo.split(":");
+			if (split.length > 1) {
+				proxyOptions.setPassword(URLDecoder.decode(split[1], UTF_8));
+			}
+			proxyOptions.setUsername(URLDecoder.decode(split[0], UTF_8));
+		}
+	}
 
-                        future.complete(handler.result().bodyAsJsonObject());
-                    }
-                    else
-                    {
 
-                        logger.error("Issue to get response ");
-                        if(handler.result()!=null) {
-                            future.fail("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
-                            logger.error("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
-                        }
-                        else
-                        {
-                            logger.error("Error to get the response " ,handler.cause());
-                            future.fail("Error to get the response " + handler.cause().getMessage());
-                        }
-                    }
+	public int getServerPort() {
+		return serverPort;
+	}
 
-                });
+	public void setServerPort(int serverport) {
+		this.serverPort = serverport;
+	}
 
-        return future;
-    }
-    public Future<String> sendJsonObjectStringResult(String uri, HashMap<String,String> headers, JsonObject object)
-    {
+	public String getServerHost() {
+		return serverHost;
+	}
 
-        Future<String> future=Future.future();
-        HttpRequest<Buffer> request = client.post(serverport,serverhost,uri);
+	public void setServerHost(String serverhost) {
+		this.serverHost = serverhost;
+	}
 
-        MultiMap header=((HttpRequest) request).headers();
-        header.addAll(headers);
-        request.putHeaders(header)
-                .expect(ResponsePredicate.JSON)
-                .expect(ResponsePredicate.status(200,300))
-                .sendJson(object,handler->{
-                    if(handler.succeeded())
-                    {
-                        logger.debug("Request sent successfuly - uri :"+uri+" payload :"+object.toString());
-                        logger.debug("Received the following response :"+ handler.result().bodyAsString());
-                        future.complete(handler.result().bodyAsString());
+	public Future<String> sendGetRequest(String serverhost, String serverport, String uri, boolean ssl) {
 
-                    }
-                    else
-                    {
-                        logger.error("Issue to receive response ");
-                        if(handler.result()!=null) {
-                            logger.error("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
-                            future.fail("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
-                        }
-                        else {
-                            logger.error("no Response ", handler.cause());
-                            future.fail("no Response " + handler.cause().getMessage());
+		Future<String> future = Future.future();
 
-                        }
+		HttpRequest<Buffer> request = client.get(Integer.parseInt(serverport), serverhost, uri).ssl(ssl);
 
-                    }
+		request.send(httpResponseAsyncResult -> {
+			if (httpResponseAsyncResult.succeeded()) {
+				LOGGER.debug("Request sent successfully - uri :" + uri);
+				LOGGER.debug("Received the following response :" + httpResponseAsyncResult.result().bodyAsString() + " with the message " + httpResponseAsyncResult.result().statusMessage());
 
-                });
+				future.complete(httpResponseAsyncResult.result().bodyAsString());
+			} else {
+				LOGGER.debug("Unable to get a successful response");
+				if (httpResponseAsyncResult.result() != null) {
+					future.fail("Response code :" + httpResponseAsyncResult.result().statusCode() + " and response  " + httpResponseAsyncResult.result().bodyAsString());
+					LOGGER.error("Response code :" + httpResponseAsyncResult.result().statusCode() + " and response  " + httpResponseAsyncResult.result().bodyAsString());
+				} else {
+					LOGGER.error("Error to get the response ", httpResponseAsyncResult.cause());
+					future.fail("Error to get the response " + httpResponseAsyncResult.cause().getMessage());
+				}
 
-        return future;
-    }
+			}
+		});
 
-    public Future<JsonObject> sendJsonObject(String uri, HashMap<String,String> headers, JsonObject object)
-    {
+		return future;
+	}
 
-        Future<JsonObject> future=Future.future();
-        HttpRequest<Buffer> request = client.post(serverport,serverhost,uri);
+	public Future<JsonObject> sendMultiPartObjects(String uri, HashMap<String, String> headers, List<MultiFormOject> object, Optional<String> user, Optional<String> password) throws HttpException {
 
-        MultiMap header=((HttpRequest) request).headers();
-        header.addAll(headers);
-        request.putHeaders(header)
-                .expect(ResponsePredicate.JSON)
-                .expect(ResponsePredicate.status(200,300))
-                .sendJson(object,handler->{
-                    if(handler.succeeded())
-                    {
-                        logger.debug("Request sent successfuly - uri :"+uri+" payload :"+object.toString());
-                        future.complete(handler.result().bodyAsJsonObject());
-                        logger.debug("Received the following response :"+ handler.result().toString());
-                    }
-                    else
-                    {
-                        logger.error("Issue to get response ");
-                        if(handler.result()!=null) {
-                            future.fail("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
-                            logger.error("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
-                        }
-                        else {
-                            future.fail("no Response " + handler.cause().getMessage());
-                            logger.error("no Response ", handler.cause());
-                        }
+		Future<JsonObject> future = Future.future();
+		if (object == null && object.size() <= 1) {
+			LOGGER.error("The files to send is null ");
+			throw new HttpException("The MultiPart request needs a list one file ");
+		}
 
-                    }
+		HttpRequest<Buffer> request = client.post(serverPort, serverHost, uri);
 
-                });
 
-        return future;
-    }
+		MultipartForm form = MultipartForm.create();
+		object.stream().forEach(multiFormOject -> {
+			form.binaryFileUpload(multiFormOject.getParameterName(), multiFormOject.getFilename(), multiFormOject.getPath(), multiFormOject.getContentType());
+		});
+
+		MultiMap header = ((HttpRequest) request).headers();
+		header.addAll(headers);
+		if (user.isPresent() && password.isPresent()) {
+			request.basicAuthentication(user.get(), password.get());
+			LOGGER.debug("Basic auth added username" + user.get() + " pass " + password.get());
+		}
+
+
+		LOGGER.debug("preparing the request " + uri + " with payload" + object.toString());
+		LOGGER.debug("Jira server :" + this.serverHost + " port " + String.valueOf(serverPort));
+		request.putHeaders(header)
+				.sendMultipartForm(form, handler -> {
+					if (handler.succeeded()) {
+						LOGGER.debug("Request sent successfuly - uri :" + uri + " payload :" + object.toString());
+						LOGGER.debug("Received the following response :" + handler.result().bodyAsString() + " with the message " + handler.result().statusMessage());
+
+						future.complete(handler.result().bodyAsJsonObject());
+					} else {
+
+						LOGGER.error("Issue to get response ");
+						if (handler.result() != null) {
+							future.fail("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
+							LOGGER.error("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
+						} else {
+							LOGGER.error("Error to get the response ", handler.cause());
+							future.fail("Error to get the response " + handler.cause().getMessage());
+						}
+					}
+
+				});
+
+		return future;
+	}
+
+	public Future<String> sendJsonObjectStringResult(String uri, HashMap<String, String> headers, JsonObject object) {
+
+		Future<String> future = Future.future();
+		HttpRequest<Buffer> request = client.post(serverPort, serverHost, uri);
+
+		MultiMap header = request.headers();
+		header.addAll(headers);
+		request.putHeaders(header)
+				.expect(ResponsePredicate.JSON)
+				.expect(ResponsePredicate.status(200, 300))
+				.sendJson(object, handler -> {
+					if (handler.succeeded()) {
+						LOGGER.debug("Request sent successfuly - uri :" + uri + " payload :" + object.toString());
+						LOGGER.debug("Received the following response :" + handler.result().bodyAsString());
+						future.complete(handler.result().bodyAsString());
+
+					} else {
+						LOGGER.error("Issue to receive response ");
+						if (handler.result() != null) {
+							LOGGER.error("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
+							future.fail("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
+						} else {
+							LOGGER.error("no Response ", handler.cause());
+							future.fail("no Response " + handler.cause().getMessage());
+
+						}
+
+					}
+
+				});
+
+		return future;
+	}
+
+	public Future<JsonObject> sendJsonObject(String uri, HashMap<String, String> headers, JsonObject object) {
+
+		Future<JsonObject> future = Future.future();
+		HttpRequest<Buffer> request = client.post(serverPort, serverHost, uri);
+
+		MultiMap header = request.headers();
+		header.addAll(headers);
+		request.putHeaders(header)
+				.expect(ResponsePredicate.JSON)
+				.expect(ResponsePredicate.status(200, 300))
+				.sendJson(object, handler -> {
+					if (handler.succeeded()) {
+						LOGGER.debug("Request sent successfuly - uri :" + uri + " payload :" + object.toString());
+						future.complete(handler.result().bodyAsJsonObject());
+						LOGGER.debug("Received the following response :" + handler.result().toString());
+					} else {
+						LOGGER.error("Issue to get response ");
+						if (handler.result() != null) {
+							future.fail("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
+							LOGGER.error("Response code :" + handler.result().statusCode() + " and response  " + handler.result().bodyAsString());
+						} else {
+							future.fail("no Response " + handler.cause().getMessage());
+							LOGGER.error("no Response ", handler.cause());
+						}
+
+					}
+
+				});
+
+		return future;
+	}
 }

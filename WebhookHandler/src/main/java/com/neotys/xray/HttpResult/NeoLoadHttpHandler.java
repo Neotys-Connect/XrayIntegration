@@ -12,19 +12,15 @@ import com.neotys.xray.Logger.NeoLoadLogger;
 import com.neotys.xray.conf.NeoLoadException;
 import com.neotys.xray.datamodel.NeoLoadXrayDescription;
 import com.neotys.xray.datamodel.result.CloudAuth;
-import com.neotys.xray.datamodel.result.testexecjson.Fields;
 import com.neotys.xray.datamodel.result.Robotxml.Robot;
 import com.neotys.xray.datamodel.result.testexecjson.NeoLoadTestDetails;
 import com.neotys.xray.datamodel.result.testjson.Field;
 import com.neotys.xray.datamodel.result.testjson.NeoLoadRunDetails;
-import com.sun.org.apache.xpath.internal.operations.Mult;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.multipart.MultipartForm;
 import net.dongliu.gson.GsonJava8TypeAdapterFactory;
-import sun.net.www.http.HttpClient;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -102,9 +98,9 @@ public class NeoLoadHttpHandler {
         CloudAuth cloudAuth=new CloudAuth(clien_id.get(),client_secret.get());
         header.put("Content-Type","application/json");
         io.vertx.core.json.JsonObject authjson = new io.vertx.core.json.JsonObject(Json.encode(cloudAuth));
-        client.setServerhost(cloudhost.get());
+        client.setServerHost(cloudhost.get());
 
-        client.setServerport(Integer.parseInt(cloudport.get()));
+        client.setServerPort(Integer.parseInt(cloudport.get()));
         Future<String> response=client.sendJsonObjectStringResult(XRAY_URL_CLOUD_AUTH,header,authjson);
         String token;
         response.setHandler(result-> {
@@ -128,7 +124,7 @@ public class NeoLoadHttpHandler {
     public Future<Boolean> sendResult(Vertx vertx) throws ApiException, JAXBException, IOException, NeoLoadException, HttpException,JsonSyntaxException {
         Future<Boolean> futureresult=Future.future();
 
-        Httpclient client=new Httpclient(vertx,ssl);
+        Httpclient client=new Httpclient(vertx,ssl, true);
         HashMap<String,String> header=new HashMap<>();
 
         Future<Boolean> testapi=testAPIConnectivity(vertx);
@@ -203,8 +199,8 @@ public class NeoLoadHttpHandler {
                    else
                    {
                        logger.debug("Interacting with JIRA on prem");
-                       client.setServerport(Integer.parseInt(managedport.get()));
-                       client.setServerhost(managedHost.get());
+                       client.setServerPort(Integer.parseInt(managedport.get()));
+                       client.setServerHost(managedHost.get());
                        header.put("Content-Type","multipart/form-data");
 
                        String path;

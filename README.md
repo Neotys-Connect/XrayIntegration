@@ -119,7 +119,7 @@ Requirements : Server having :
 * docker installed
 * acessible from NeoLoad WEB ( Saas our your managemend instance of NeoLoad WEB)
 
-THe deployment will use either :
+The deployment will use either :
 * `/deployment/docker-compose-Cloud` to connect to Jira Cloud
 * `/deployment/docker-compose-Onpremise` to connect to your Jira on premise instance
 
@@ -129,6 +129,9 @@ the deployment will be done by running the following command :
 ```bash
 docker-compose -f <docker file> up -d
 ```
+
+If you need pass thought a proxy to contact jira. You can use environment variable https_proxy=http://login:pass@myproxy:3124 
+You can add this line under environment docker-compose file.
 #### Configure the WebHook in your NeoLoad Web Account to send a notification to your WebHook service
 
 The webhookhandler service is listenning to 2 disctinct endpoints :
@@ -160,3 +163,4 @@ To configure the webhook in NeoLoad WEB you will need to :
 }
 ```
 <p align="center"><img src="/screenshots/webhook.png" alt="XrayContext webhok" /></p>
+
